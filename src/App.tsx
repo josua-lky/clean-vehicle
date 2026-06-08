@@ -1,0 +1,1276 @@
+import api from './services/api';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { BookingState, Transaction, Car, NotificationItem } from './types';
+import { NOTIFICATIONS } from './data';
+import WelcomeView from './components/WelcomeView';
+import LoginView from './components/LoginView';
+import RegisterView from './components/RegisterView';
+import DashboardView from './components/DashboardView';
+import BookingView from './components/BookingView';
+import ServiceDetailsView from './components/ServiceDetailsView';
+import ConfirmOrderView from './components/ConfirmOrderView';
+import PaymentView from './components/PaymentView';
+import PaymentSuccessView from './components/PaymentSuccessView';
+import TrackingView from './components/TrackingView';
+import HistoryView from './components/HistoryView';
+import AlertsView from './components/AlertsView';
+import ProfileView from './components/ProfileView';
+
+export default function App() {
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved === 'true';
+  });
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('darkMode', darkMode.toString());
+  }, [darkMode]);
+
+
+  const [dbPackages, setDbPackages] = useState<any[]>([]);
+  const [dbOutlets, setDbOutlets] = useState<any[]>([]);
+  const [dbTechnicians, setDbTechnicians] = useState<any[]>([]);
+  const [dbPromos, setDbPromos] = useState<any[]>([]);
+
+  const fetchDbPromos = async () => {
+    try {
+      const response = await api.get('/promos');
+      const fetchedPromos = response.data || [];
+      setDbPromos(fetchedPromos);
+
+      const seenStr = localStorage.getItem('seenPromoIds');
+      let seenIds: number[] = seenStr ? JSON.parse(seenStr) : [];
+
+      if (seenIds.length === 0) {
+        const initialIds = fetchedPromos.map((p: any) => p.id);
+        localStorage.setItem('seenPromoIds', JSON.stringify(initialIds));
+      } else {
+        const newPromos = fetchedPromos.filter((p: any) => !seenIds.includes(p.id));
+        if (newPromos.length > 0) {
+          const newlyAddedNotifs: NotificationItem[] = [];
+          
+          newPromos.forEach((promo: any) => {
+            const newNotif: NotificationItem = {
+              id: `notif-promo-${promo.id}`,
+              category: 'promo',
+              title: `Promo Baru: ${promo.name}`,
+              time: 'Baru Saja',
+              description: promo.description || `Gunakan kode ${promo.code} untuk mendapatkan potongan harga spesial!`,
+              idTag: promo.code,
+              hasCta: true,
+              ctaText: 'GUNAKAN PROMO'
+            };
+
+            newlyAddedNotifs.push(newNotif);
+            seenIds.push(promo.id);
+            
+            setActiveToast({
+              title: newNotif.title,
+              description: newNotif.description
+            });
+          });
+
+          setPromoNotifications(prev => {
+            const updated = [...newlyAddedNotifs, ...prev];
+            localStorage.setItem('promoNotifications', JSON.stringify(updated));
+            return updated;
+          });
+
+          localStorage.setItem('seenPromoIds', JSON.stringify(seenIds));
+        }
+      }
+    } catch (err) {
+      console.log('Error fetching promos:', err);
+    }
+  };
+
+  const fetchDbPackages = async () => {
+    try {
+      const response = await api.get('/packages');
+      setDbPackages(response.data);
+    } catch (err) {
+      console.log('Error fetching packages:', err);
+    }
+  };
+
+  const fetchDbOutlets = async () => {
+    try {
+      const response = await api.get('/outlets');
+      setDbOutlets(response.data);
+    } catch (err) {
+      console.log('Error fetching outlets:', err);
+    }
+  };
+
+  const fetchDbTechnicians = async () => {
+    try {
+      const response = await api.get('/technicians');
+      setDbTechnicians(response.data);
+    } catch (err) {
+      console.log('Error fetching technicians:', err);
+    }
+  };
+
+  const fetchVehicles = async () => {
+    try {
+      const response = await api.get('/vehicles');
+      const mapped = response.data.map((v: any) => ({
+        id: String(v.id),
+        name: `${v.brand} ${v.model}`,
+        brand: v.brand,
+        model: v.model,
+        color: v.color,
+        year: v.year,
+        plate: v.license_plate,
+        type: v.type === 'roda_2' ? 'motor' : 'mobil'
+      }));
+      setVehicles(mapped);
+    } catch (err) {
+      console.log('Error fetching vehicles:', err);
+    }
+  };
+
+  const fetchUserAddress = async () => {
+    try {
+      const response = await api.get('/profile/address');
+      if (response.data.success && response.data.address) {
+        const addr = response.data.address;
+        const fullAddress = addr.address || '';
+        let locName = 'Jakarta Selatan';
+        let pickup = fullAddress;
+
+        if (fullAddress.includes(' | ')) {
+          const parts = fullAddress.split(' | ');
+          locName = parts[0];
+          pickup = parts[1];
+        } else if (fullAddress) {
+          locName = fullAddress.split(',')[0] || 'Jakarta';
+        }
+
+        setBooking(prev => ({
+          ...prev,
+          locationName: locName,
+          pickupLocation: pickup
+        }));
+      }
+    } catch (err) {
+      console.log('Error fetching user address:', err);
+    }
+  };
+
+  const handleSaveLocation = async (locationName: string, pickupLocation: string, lat?: number, lon?: number) => {
+    setBooking(prev => ({
+      ...prev,
+      locationName,
+      pickupLocation
+    }));
+
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const combinedAddress = `${locationName} | ${pickupLocation}`;
+        await api.put('/profile/address', {
+          address: combinedAddress,
+          latitude: lat,
+          longitude: lon
+        });
+      }
+    } catch (err) {
+      console.log('Error saving address:', err);
+    }
+  };
+
+  useEffect(() => {
+
+    const checkAuth = async () => {
+  
+      try {
+  
+        const token =
+          localStorage.getItem('token');
+  
+        if (!token) {
+  
+          setAuthLoading(false);
+          return;
+  
+        }
+  
+        const response =
+          await api.get('/profile');
+  
+        const currentUser =
+          response.data.user;
+  
+        setUser(currentUser);
+  
+        setIsLoggedIn(true);
+
+        fetchBookings();
+        fetchVehicles();
+        fetchDbPackages();
+        fetchDbOutlets();
+        fetchDbTechnicians();
+        fetchDbPromos();
+        fetchUserAddress();
+  
+        const savedScreen =
+  localStorage.getItem(
+    'currentScreen'
+  );
+
+setCurrentScreen(
+  (savedScreen as any)
+    || 'dashboard'
+);
+  
+      } catch (error) {
+  
+        console.log(error);
+  
+        localStorage.clear();
+  
+        setUser(null);
+  
+        setIsLoggedIn(false);
+  
+      } finally {
+  
+        setAuthLoading(false);
+  
+      }
+  
+    };
+  
+    checkAuth();
+  
+  }, []);
+
+  const handleToggleTheme = () => {
+    setDarkMode(prev => !prev);
+  };
+
+  // Listen to hash router links on load/change
+  useEffect(() => {
+    const handleHashCheck = () => {
+      const h = window.location.hash;
+      if (h === '#/faq' || h === '#/notifications') {
+        navigateTo('profile');
+      }
+    };
+    window.addEventListener('hashchange', handleHashCheck);
+    handleHashCheck();
+    return () => {
+      window.removeEventListener('hashchange', handleHashCheck);
+    };
+  }, []);
+
+
+  const [currentScreen, setCurrentScreen] = useState<
+    'welcome' | 'login' | 'register' | 'dashboard' | 'booking' | 'details' | 'confirm' | 'payment' | 'success' | 'tracking' | 'history' | 'alerts' | 'profile'
+  >('welcome');
+
+  const navigateTo = (
+    screen:
+  'welcome'
+  | 'login'
+  | 'register'
+  | 'dashboard'
+  | 'booking'
+  | 'details'
+  | 'confirm'
+  | 'payment'
+  | 'success'
+  | 'tracking'
+  | 'history'
+  | 'alerts'
+  | 'profile'
+  ) => {
+  
+    localStorage.setItem(
+      'currentScreen',
+      screen
+    );
+  
+    setCurrentScreen(screen);
+  
+  };
+
+  // Authenticated state
+  const [user, setUser] = useState<any>(null);
+  const [isLoggedIn, setIsLoggedIn]
+  = useState(false);
+  const [authLoading, setAuthLoading]
+  = useState(true);
+  const [viewOnlyPackages, _setViewOnlyPackages] = useState<boolean>(() => {
+    return localStorage.getItem('viewOnlyPackages') === 'true';
+  });
+  const setViewOnlyPackages = (val: boolean) => {
+    _setViewOnlyPackages(val);
+    localStorage.setItem('viewOnlyPackages', String(val));
+  };
+
+  // Lists in state to allow dynamic additions/interaction
+  const [vehicles, setVehicles]
+  = useState<Car[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [activeTrackedOrderId, setActiveTrackedOrderId] = useState<string | null>(null);
+  const [hasReviewedPendingToday, setHasReviewedPendingToday] = useState<boolean>(() => {
+    return localStorage.getItem('hasReviewedPendingToday') === 'true';
+  });
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [promoNotifications, setPromoNotifications] = useState<NotificationItem[]>(() => {
+    const saved = localStorage.getItem('promoNotifications');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [activeToast, setActiveToast] = useState<{ title: string; description: string } | null>(null);
+  const [readNotifIds, setReadNotifIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('readNotifIds');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const formatNotifTime = (dateStr: string) => {
+    if (!dateStr) return 'Baru Saja';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return 'Baru Saja';
+      
+      const now = new Date();
+      const isToday = d.getDate() === now.getDate() && 
+                      d.getMonth() === now.getMonth() && 
+                      d.getFullYear() === now.getFullYear();
+      
+      if (isToday) {
+        const hrs = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        return `${hrs}:${mins}`;
+      }
+      
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const isYesterday = d.getDate() === yesterday.getDate() && 
+                          d.getMonth() === yesterday.getMonth() && 
+                          d.getFullYear() === yesterday.getFullYear();
+      
+      if (isYesterday) {
+        return 'Kemarin';
+      }
+      
+      const diffTime = Math.abs(now.getTime() - d.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays <= 7) {
+        return `${diffDays} hari lalu`;
+      }
+      
+      return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    } catch (e) {
+      return 'Baru Saja';
+    }
+  };
+
+  const formatPaymentMethod = (method: string, provider: string) => {
+    const methodMap: Record<string, string> = {
+      va_bank: 'Virtual Account',
+      ewallet: 'E-Wallet',
+      qris: 'QRIS',
+      credit_card: 'Kartu Kredit',
+      cod: 'Bayar di Tempat'
+    };
+    const m = methodMap[method] || method || 'OnoPay';
+    const p = provider ? provider.toUpperCase() : '';
+    return p ? `${m} (${p})` : m;
+  };
+
+  const fetchBookings = async () => {
+    try {
+      const response = await api.get('/bookings');
+      const mapped = response.data.map((b: any) => ({
+        id: String(b.id),
+        serviceName: b.service_type === 'home' ? 'Cuci di Rumah' : 'Cuci di Outlet',
+        date: b.scheduled_at,
+        price: Number(b.total_amount),
+        status: mapBookingStatus(b.status),
+        vehicleName: b.vehicle 
+          ? `${b.vehicle.brand} ${b.vehicle.model} (${b.vehicle.license_plate})`
+          : b.vehicle_name,
+        vehicleType: b.vehicle_type === 'roda_2' ? 'motor' : 'mobil',
+        packageName: b.package?.name,
+        additionalNotes: b.notes || '',
+        promoCode: b.promo?.code,
+        serviceAddress: b.service_address || '',
+        serviceType: b.service_type || 'home',
+        rating: b.review ? Number(b.review.rating) : undefined,
+        reviewText: b.review ? b.review.comment : undefined,
+        technician: b.technician ? {
+          id: String(b.technician.id),
+          name: b.technician.name,
+          rating: Number(b.technician.rating || 4.5),
+          avatar: b.technician.profile_photo 
+            ? `http://127.0.0.1:8000/storage/${b.technician.profile_photo}`
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(b.technician.name)}&background=1B2337&color=F0C419`,
+          specialization: b.technician.specialization,
+          area: b.technician.area
+        } : null
+      }));
+
+      setTransactions(Array.isArray(response.data) ? mapped : []);
+
+      // Load settings from localStorage
+      const savedSettings = localStorage.getItem('notifEvents');
+      const notifSettings = savedSettings ? JSON.parse(savedSettings) : {
+        bookingConfirmed: true,
+        serviceFinished: true,
+        paymentSuccess: true,
+        promoOffers: true
+      };
+
+      const derivedNotifs: NotificationItem[] = [];
+
+      // Filter static notifications from NOTIFICATIONS
+      const staticPromoAndInfo = NOTIFICATIONS.filter(n => {
+        if (n.category === 'promo') {
+          return notifSettings.promoOffers;
+        }
+        if (n.category === 'info') {
+          return notifSettings.promoOffers;
+        }
+        return n.category !== 'pesanan'; // exclude static dummy pesanan
+      });
+
+      derivedNotifs.push(...staticPromoAndInfo);
+
+      // Append dynamic promo notifications
+      const savedPromoNotifs = localStorage.getItem('promoNotifications');
+      const parsedPromoNotifs = savedPromoNotifs ? JSON.parse(savedPromoNotifs) : [];
+      derivedNotifs.push(...parsedPromoNotifs);
+
+      // Derive from bookings in response.data
+      if (Array.isArray(response.data)) {
+        response.data.forEach((b: any) => {
+          // 1. Confirmed / In Progress / Assigned / On Way
+          if (['confirmed', 'assigned', 'on_way', 'in_progress'].includes(b.status)) {
+            if (notifSettings.bookingConfirmed) {
+              derivedNotifs.push({
+                id: `notif-confirmed-${b.id}`,
+                category: 'pesanan',
+                title: 'Pemesanan Dikonfirmasi',
+                time: formatNotifTime(b.updated_at || b.created_at || b.scheduled_at),
+                description: `Pesanan cuci kendaraan (${b.vehicle_name || (b.vehicle ? b.vehicle.brand + ' ' + b.vehicle.model : 'Kendaraan')}) Anda dengan kode ${b.booking_code} telah dikonfirmasi oleh admin. Petugas/teknisi akan segera memproses pencucian sesuai jadwal.`,
+                idTag: b.booking_code,
+                hasCta: true,
+                ctaText: 'LACAK PROSES'
+              });
+            }
+          }
+
+          // 2. Completed
+          if (b.status === 'completed') {
+            if (notifSettings.serviceFinished) {
+              derivedNotifs.push({
+                id: `notif-completed-${b.id}`,
+                category: 'pesanan',
+                title: 'Pesanan Selesai',
+                time: formatNotifTime(b.updated_at || b.created_at || b.scheduled_at),
+                description: `Layanan ${b.package?.name || 'Cuci Kendaraan'} untuk kendaraan ${b.vehicle_name || (b.vehicle ? b.vehicle.brand + ' ' + b.vehicle.model : 'Kendaraan')} telah selesai dikerjakan. Terima kasih telah memercayai kami!`,
+                idTag: b.booking_code,
+                hasCta: true,
+                ctaText: 'TULIS ULASAN'
+              });
+            }
+          }
+
+          // 3. Payment Receipt (Rincian Transaksi & Pembayaran)
+          if (b.payment && (b.payment.status === 'paid' || b.payment.status === 'success')) {
+            if (notifSettings.paymentSuccess) {
+              const dateObj = new Date(b.payment.paid_at || b.payment.updated_at || b.updated_at);
+              const formattedDate = isNaN(dateObj.getTime())
+                ? 'Baru Saja'
+                : dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + 
+                  String(dateObj.getHours()).padStart(2, '0') + ':' + String(dateObj.getMinutes()).padStart(2, '0');
+
+              derivedNotifs.push({
+                id: `notif-receipt-${b.id}`,
+                category: 'pesanan',
+                title: 'Detail Struk Transaksi',
+                time: formatNotifTime(b.payment.paid_at || b.payment.updated_at),
+                description: `Pembayaran sukses untuk booking ${b.booking_code}. Berikut adalah struk rincian pembayaran Anda.`,
+                idTag: b.booking_code,
+                receipt: {
+                  bookingCode: b.booking_code,
+                  packageName: b.package?.name || 'Cuci Kendaraan',
+                  vehicleName: b.vehicle_name || (b.vehicle ? `${b.vehicle.brand} ${b.vehicle.model}` : 'Kendaraan'),
+                  price: Number(b.subtotal),
+                  discount: Number(b.discount_amount),
+                  total: Number(b.total_amount),
+                  method: formatPaymentMethod(b.payment.payment_method, b.payment.payment_provider),
+                  date: formattedDate
+                }
+              });
+            }
+          }
+        });
+      }
+
+      setNotifications(prev => {
+        if (prev.length > 0) {
+          const newItems = derivedNotifs.filter(n => !prev.some(p => p.id === n.id));
+          if (newItems.length > 0) {
+            const latestNew = newItems[0];
+            setActiveToast({
+              title: latestNew.title,
+              description: latestNew.description
+            });
+          }
+        }
+        return derivedNotifs;
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  
+  const mapBookingStatus = (
+    status: string
+  ) => {
+  
+    switch (status) {
+  
+      case 'pending':
+        return 'Diproses';
+  
+      case 'completed':
+        return 'Selesai';
+  
+      case 'cancelled':
+        return 'Dibatalkan';
+  
+      default:
+        return 'Diproses';
+  
+    }
+  
+  };
+
+  // Active bookings state values
+  const [booking, setBooking] = useState<BookingState>({
+    vehicleType: 'mobil',
+    selectedServiceId: null,
+    selectedPackageId: '',
+    selectedTechnicianId: '',
+    selectedDate: '',
+    selectedTime: '',
+    locationName: 'Kuningan, Jakarta Selatan',
+    pickupLocation: 'Sudirman Central Business District, Jakarta',
+    selectedCarId: '',
+    paymentMethod: 'bank'
+  });
+
+  const [paymentDetails, setPaymentDetails] = useState({
+    amount: 105000,
+    method: 'Transfer Bank (BCA)'
+  });
+
+  const handleUpdateBooking = (updated: Partial<BookingState>) => {
+    setBooking(prev => ({ ...prev, ...updated }));
+  };
+
+  const handleLoginSuccess = (
+    loggedUser: any
+  ) => {
+  
+    setUser(loggedUser);
+  
+    setIsLoggedIn(true);
+
+    fetchBookings();
+    fetchVehicles();
+    fetchDbPackages();
+    fetchDbOutlets();
+    fetchDbTechnicians();
+    fetchDbPromos();
+    fetchUserAddress();
+  
+    navigateTo('dashboard');
+  
+  };
+
+  const handleRegisterSuccess = (
+    loggedUser: any
+  ) => {
+  
+    setUser(loggedUser);
+  
+    setIsLoggedIn(true);
+
+    fetchBookings();
+    fetchVehicles();
+    fetchDbPackages();
+    fetchDbOutlets();
+    fetchDbTechnicians();
+    fetchDbPromos();
+    fetchUserAddress();
+  
+    navigateTo('dashboard');
+  
+  };
+
+  const handleUpdateProfile = (
+    name: string,
+    profilePhoto: string
+  ) => {
+  
+    setUser(prev => {
+  
+      const updatedUser = {
+  
+        ...prev,
+  
+        name,
+  
+        profile_photo: profilePhoto
+  
+      };
+  
+      localStorage.setItem(
+        'user',
+        JSON.stringify(updatedUser)
+      );
+  
+      return updatedUser;
+  
+    });
+  
+  };
+
+  const handleAddVehicle = async (newVeh: Omit<Car, 'id'>) => {
+    try {
+      const payload = {
+        brand: newVeh.brand || 'Unknown',
+        model: newVeh.model || '-',
+        license_plate: newVeh.plate,
+        type: newVeh.type === 'motor' ? 'roda_2' : 'roda_4',
+        color: newVeh.color || '',
+        year: newVeh.year || '',
+        notes: ''
+      };
+      await api.post('/vehicles', payload);
+      await fetchVehicles();
+    } catch (error) {
+      console.log('Add vehicle error:', error);
+    }
+  };
+
+  const handleUpdateVehicle = async (id: string, updated: Partial<Car>) => {
+    try {
+      const existing = vehicles.find(v => v.id === id);
+      if (!existing) return;
+      const brand = updated.brand !== undefined ? updated.brand : existing.brand;
+      const model = updated.model !== undefined ? updated.model : existing.model;
+      const color = updated.color !== undefined ? updated.color : existing.color;
+      const year = updated.year !== undefined ? updated.year : existing.year;
+      const plate = updated.plate !== undefined ? updated.plate : existing.plate;
+      const type = updated.type !== undefined ? updated.type : existing.type;
+      
+      await api.put(`/vehicles/${id}`, {
+        brand,
+        model,
+        color,
+        year,
+        license_plate: plate,
+        type: type === 'motor' ? 'roda_2' : 'roda_4'
+      });
+      await fetchVehicles();
+    } catch (error) {
+      console.log('Update vehicle error:', error);
+    }
+  };
+
+  const handleDeleteVehicle = async (id: string) => {
+    try {
+      await api.delete(`/vehicles/${id}`);
+      await fetchVehicles();
+    } catch (error) {
+      console.log('Delete vehicle error:', error);
+    }
+  };
+
+  const parseBookingDate = () => {
+    try {
+      const monthsIndo = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      const parts = booking.selectedDate.split(' ');
+      if (parts.length === 3) {
+        const day = parts[0];
+        const monthName = parts[1];
+        const year = parts[2];
+        const monthIndex = monthsIndo.indexOf(monthName);
+        if (monthIndex !== -1) {
+          const monthStr = String(monthIndex + 1).padStart(2, '0');
+          const dayStr = String(day).padStart(2, '0');
+          const time = booking.selectedTime || '09:00';
+          return `${year}-${monthStr}-${dayStr} ${time}:00`;
+        }
+      }
+    } catch (e) {
+      console.log('Date parse failed, using fallback', e);
+    }
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateStr = tomorrow.toISOString().split('T')[0];
+    const timeStr = booking.selectedTime || '09:00';
+    return `${dateStr} ${timeStr}:00`;
+  };
+
+  const handlePaymentSuccess = async (amount: number, methodUsed: string) => {
+    try {
+      let vehicleId = Number(booking.selectedCarId);
+      if (isNaN(vehicleId) || !vehicleId) {
+        if (vehicles.length > 0) {
+          vehicleId = Number(vehicles[0].id);
+        } else {
+          const response = await api.post('/vehicles', {
+            brand: booking.vehicleType === 'motor' ? 'Honda' : 'Toyota',
+            model: booking.vehicleType === 'motor' ? 'Beat' : 'Avanza',
+            license_plate: booking.vehicleType === 'motor' ? 'B 1234 ABC' : 'B 5678 DEF',
+            type: booking.vehicleType === 'motor' ? 'roda_2' : 'roda_4',
+            color: 'Hitam',
+            year: '2022',
+            notes: 'Auto registered'
+          });
+          vehicleId = response.data.vehicle.id;
+          fetchVehicles();
+        }
+      }
+
+      const targetType = booking.vehicleType === 'motor' ? 'roda_2' : 'roda_4';
+      const targetName = 
+        booking.selectedPackageId === 'basic' ? 'Basic' : 
+        booking.selectedPackageId === 'detailing' ? 'Detailing' : 
+        booking.selectedPackageId === 'complete' ? 'Complete' : 
+        booking.selectedPackageId === 'engine' ? 'Engine' : 
+        'Premium';
+      const dbPackage = dbPackages.find(p => p.vehicle_type === targetType && p.name.toLowerCase().includes(targetName.toLowerCase()))
+                        || dbPackages.find(p => p.name.toLowerCase().includes(targetName.toLowerCase()))
+                        || dbPackages[0];
+      const packageId = dbPackage ? dbPackage.id : 1;
+
+      const payload = {
+        vehicle_id: vehicleId,
+        package_id: packageId,
+        service_type: (booking.pickupLocation.toLowerCase().includes('outlet') || booking.locationName.toLowerCase().includes('outlet')) ? 'outlet' : 'home',
+        scheduled_at: parseBookingDate(),
+        service_address: booking.pickupLocation || 'Alamat customer',
+        notes: 'Pemesanan dari React',
+        promo_code: booking.appliedPromoCode || null,
+        technician_id: booking.selectedTechnicianId ? Number(booking.selectedTechnicianId) : null,
+        outlet_id: booking.selectedOutletId ? Number(booking.selectedOutletId) : null
+      };
+
+      console.log('Creating booking with payload:', payload);
+      const response = await api.post('/bookings', payload);
+      console.log('Booking response:', response.data);
+
+      await fetchBookings();
+      
+      const newBooking = response.data.booking;
+      const generatedId = newBooking ? String(newBooking.id) : `CV-${Date.now().toString().slice(-7)}`;
+      
+      setActiveTrackedOrderId(generatedId);
+      setPaymentDetails({ amount, method: methodUsed });
+      setBooking(prev => ({ ...prev, appliedPromoCode: null }));
+      navigateTo('success');
+    } catch (err: any) {
+      console.log('Create booking api error:', err);
+      alert('Gagal menyimpan pesanan ke database: ' + (err?.response?.data?.message || err.message));
+    }
+  };
+
+  const handleCancelActiveOrder = async (id?: string) => {
+    const targetId = id || transactions.find(t => t.status === 'Dipesan' || t.status === 'Diproses')?.id;
+    if (!targetId) return;
+
+    try {
+      console.log('Cancelling booking ID:', targetId);
+      await api.put(`/bookings/${targetId}/cancel`, {
+        reason: 'Dibatalkan oleh pengguna dari layar lacak pesanan.'
+      });
+      await fetchBookings();
+    } catch (err: any) {
+      console.log('Cancel booking error:', err);
+      alert('Gagal membatalkan pesanan: ' + (err?.response?.data?.message || err.message));
+    }
+  };
+
+  const handleReviewSubmission = async (id: string, stars: number, text: string) => {
+    try {
+      await api.post(`/bookings/${id}/review`, {
+        rating: stars,
+        comment: text
+      });
+      await fetchBookings();
+    } catch (err: any) {
+      console.log('Error submitting review:', err);
+      alert('Gagal mengirim ulasan: ' + (err?.response?.data?.message || err.message));
+    }
+  };
+
+  const handleRepeatOrder = (srvName: string, pPrice: number) => {
+    // Inject service item names, pre-fill booking setup and push user straight into scheduling menu!
+    setBooking(prev => ({
+      ...prev,
+      selectedPackageId: srvName.toLowerCase().includes('interior') ? 'detailing' : 'premium'
+    }));
+    navigateTo('booking');
+  };
+
+  const handleLogout = () => {
+
+    localStorage.clear();
+  
+    setUser(null);
+  
+    setIsLoggedIn(false);
+  
+    navigateTo('login');
+  
+  };
+
+  // Fetch bookings when switching screens to ensure data is always fresh (e.g. going to history view)
+  useEffect(() => {
+    if (isLoggedIn && currentScreen !== 'welcome' && currentScreen !== 'login' && currentScreen !== 'register') {
+      fetchBookings();
+    }
+  }, [currentScreen, isLoggedIn]);
+
+  // Global background polling for real-time bookings & notifications & promos
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    fetchBookings(); // Fetch immediately
+    fetchDbPromos();
+
+    const interval = setInterval(() => {
+      fetchBookings();
+      fetchDbPromos();
+    }, 4000); // Poll every 4 seconds globally
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn]);
+
+  // Mark all notifications as read when viewing the alerts screen
+  useEffect(() => {
+    if (currentScreen === 'alerts' && notifications.length > 0) {
+      const allIds = notifications.map(n => n.id);
+      setReadNotifIds(prev => {
+        const union = Array.from(new Set([...prev, ...allIds]));
+        localStorage.setItem('readNotifIds', JSON.stringify(union));
+        return union;
+      });
+    }
+  }, [currentScreen, notifications]);
+
+  // Auto-dismiss the premium toast popup after 4 seconds
+  useEffect(() => {
+    if (activeToast) {
+      const timer = setTimeout(() => {
+        setActiveToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeToast]);
+
+  const unreadCount = notifications.filter(n => !readNotifIds.includes(n.id)).length;
+
+  if (authLoading) {
+
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  
+  }
+
+  // Rendering screen router handler switch
+  return (
+    <>
+      <AnimatePresence mode="wait">
+        {currentScreen === 'welcome' && (
+          <motion.div
+            key="welcome"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <WelcomeView 
+              darkMode={darkMode}
+              onToggleTheme={handleToggleTheme}
+              onMulai={() => navigateTo('login')} 
+              onMasuk={() => navigateTo('login')} 
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'login' && (
+          <motion.div
+            key="login"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <LoginView 
+              onLoginSuccess={handleLoginSuccess}
+              onGoToRegister={() => navigateTo('register')}
+              onBack={() => navigateTo('welcome')}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'register' && (
+          <motion.div
+            key="register"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <RegisterView 
+              onRegisterSuccess={handleRegisterSuccess}
+              onGoToLogin={() => navigateTo('login')}
+              onBack={() => navigateTo('login')}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'dashboard' && (
+          <motion.div
+            key="dashboard"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <DashboardView 
+              darkMode={darkMode}
+              onToggleTheme={handleToggleTheme}
+              userName={user?.name || 'Alexander Sterling'}
+              userAvatar={user?.profile_photo || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17'}
+              userPhone={user?.phone}
+              booking={booking}
+              onUpdateBooking={handleUpdateBooking}
+              onBookService={(type) => {
+                if (type === 'view_packages') {
+                  setViewOnlyPackages(true);
+                  navigateTo('details');
+                  return;
+                }
+                setViewOnlyPackages(false);
+                if (type === 'tempat') {
+                  handleUpdateBooking({
+                    pickupLocation: 'Outlet Sudirman Plaza Lt. G',
+                    locationName: 'Sudirman Plaza'
+                  });
+                } else {
+                  handleUpdateBooking({
+                    pickupLocation: booking.pickupLocation || 'Sudirman Central Business District, Jakarta',
+                    locationName: booking.locationName || 'Jakarta Selatan'
+                  });
+                }
+                navigateTo('booking');
+              }}
+              onNavigate={(tab) => {
+                if (tab === 'home') navigateTo('dashboard');
+                else if (tab === 'history') navigateTo('history');
+                else if (tab === 'alerts') navigateTo('alerts');
+                else if (tab === 'profile') navigateTo('profile');
+              }}
+              cars={vehicles}
+              packages={dbPackages}
+              onSaveLocation={handleSaveLocation}
+              transactions={transactions}
+              unreadCount={unreadCount}
+              promos={dbPromos}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'booking' && (
+          <motion.div
+            key="booking"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <BookingView 
+              booking={booking}
+              onUpdateBooking={handleUpdateBooking}
+              onNext={() => navigateTo('details')}
+              onBack={() => navigateTo('dashboard')}
+              userAvatar={user?.profile_photo}
+              outlets={dbOutlets}
+              technicians={dbTechnicians}
+              onSaveLocation={handleSaveLocation}
+              cars={vehicles}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'details' && (
+          <motion.div
+            key="details"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <ServiceDetailsView 
+              booking={booking}
+              onUpdateBooking={handleUpdateBooking}
+              onNext={() => navigateTo('confirm')}
+              onBack={() => navigateTo(viewOnlyPackages ? 'dashboard' : 'booking')}
+              userAvatar={user?.profile_photo}
+              packages={dbPackages}
+              viewOnly={viewOnlyPackages}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'confirm' && (
+          <motion.div
+            key="confirm"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <ConfirmOrderView 
+              booking={booking}
+              onUpdateBooking={handleUpdateBooking}
+              onNext={() => navigateTo('payment')}
+              onBack={() => navigateTo('details')}
+              userAvatar={user?.profile_photo}
+              technicians={dbTechnicians}
+              packages={dbPackages}
+              onSaveLocation={handleSaveLocation}
+              cars={vehicles}
+              promos={dbPromos}
+              transactions={transactions}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'payment' && (
+          <motion.div
+            key="payment"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <PaymentView 
+              booking={booking}
+              onPaymentSuccess={handlePaymentSuccess}
+              onBack={() => navigateTo('confirm')}
+              userAvatar={user?.profile_photo}
+              userPhone={user?.phone}
+              packages={dbPackages}
+              promos={dbPromos}
+              transactions={transactions}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'success' && (
+          <motion.div
+            key="success"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <PaymentSuccessView 
+              amountPaid={paymentDetails.amount}
+              paymentMethod={paymentDetails.method}
+              onLacak={() => navigateTo('tracking')}
+              onHome={() => navigateTo('dashboard')}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'tracking' && (
+          <motion.div
+            key="tracking"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <TrackingView 
+              onBackToHome={() => navigateTo('dashboard')}
+              userAvatar={user?.profile_photo}
+              trackedTransaction={transactions.find(t => t.id === activeTrackedOrderId) || transactions.find(t => t.status === 'Dipesan')}
+              onCancelActiveOrder={handleCancelActiveOrder}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'history' && (
+          <motion.div
+            key="history"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <HistoryView 
+              transactions={transactions}
+              onSubmitReview={handleReviewSubmission}
+              onRepeatOrder={handleRepeatOrder}
+              onNavigate={(tab) => {
+                if (tab === 'home') navigateTo('dashboard');
+                else if (tab === 'history') navigateTo('history');
+                else if (tab === 'alerts') navigateTo('alerts');
+                else if (tab === 'profile') navigateTo('profile');
+              }}
+              userAvatar={user?.profile_photo}
+              onTrackActiveOrder={(orderId) => {
+                setActiveTrackedOrderId(orderId);
+                navigateTo('tracking');
+              }}
+              hasReviewedPendingToday={hasReviewedPendingToday}
+              unreadCount={unreadCount}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'alerts' && (
+          <motion.div
+            key="alerts"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <AlertsView 
+              notifications={notifications}
+              onNavigate={(tab) => {
+                if (tab === 'home') navigateTo('dashboard');
+                else if (tab === 'history') navigateTo('history');
+                else if (tab === 'alerts') navigateTo('alerts');
+                else if (tab === 'profile') navigateTo('profile');
+              }}
+              onCtaAction={(notif) => {
+                if (notif.id.startsWith('notif-confirmed-')) {
+                  const bookingId = notif.id.replace('notif-confirmed-', '');
+                  setActiveTrackedOrderId(bookingId);
+                  navigateTo('tracking');
+                } else if (notif.id.startsWith('notif-completed-') || notif.id.startsWith('notif-receipt-')) {
+                  navigateTo('history');
+                } else {
+                  navigateTo('booking');
+                }
+              }}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'profile' && (
+          <motion.div
+            key="profile"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <ProfileView 
+              darkMode={darkMode}
+              onToggleTheme={handleToggleTheme}
+              userName={user?.name}
+              userAvatar={user?.profile_photo || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17'}
+              userEmail={user?.email}
+              onUpdateProfile={handleUpdateProfile}
+              vehicles={vehicles}
+              onAddVehicle={handleAddVehicle}
+              onUpdateVehicle={handleUpdateVehicle}
+              onDeleteVehicle={handleDeleteVehicle}
+              onLogout={() => {
+                setUser(null);
+                navigateTo('welcome');
+              }}
+              onNavigate={(tab) => {
+                if (tab === 'home') navigateTo('dashboard');
+                else if (tab === 'history') navigateTo('history');
+                else if (tab === 'alerts') navigateTo('alerts');
+                else if (tab === 'profile') navigateTo('profile');
+              }}
+              booking={booking}
+              onSaveLocation={handleSaveLocation}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Premium Notification Toast Pop Up */}
+      <AnimatePresence>
+        {activeToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            onClick={() => {
+              setActiveToast(null);
+              navigateTo('alerts');
+            }}
+            className="fixed top-5 left-5 right-5 md:left-auto md:right-5 md:w-96 z-[9999] bg-[#0a2540]/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl border border-white/10 flex gap-3.5 cursor-pointer active:scale-[0.98] transition-transform select-none"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#fdc003] text-[#6c5000] flex items-center justify-center shrink-0 shadow-inner">
+              <span className="material-symbols-outlined font-extrabold text-xl animate-bounce">notifications_active</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-start gap-2">
+                <h4 className="text-xs font-black text-[#fdc003] tracking-wide uppercase">Notifikasi Baru</h4>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveToast(null);
+                  }}
+                  className="text-white/40 hover:text-white transition-colors"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              </div>
+              <h5 className="text-[11px] font-extrabold text-white mt-0.5 line-clamp-1">{activeToast.title}</h5>
+              <p className="text-[10px] text-[#768dad] font-semibold mt-0.5 leading-normal line-clamp-2">{activeToast.description}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
