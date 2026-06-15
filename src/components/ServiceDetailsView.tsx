@@ -128,8 +128,8 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
       else if (p.name.toLowerCase().includes('engine')) keyId = 'engine';
 
       return {
-        id: keyId,
-        dbId: p.id,
+        id: String(p.id),
+        keyId: keyId,
         name: p.name,
         description: p.description || 'Layanan pembersihan bodi',
         price: Number(p.price),
@@ -140,7 +140,7 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
   }, [filteredPackages]);
 
   const [selectedPkgId, setSelectedPkgId] = useState<string>(() => {
-    const initialPkg = packagesList.find(p => p.id === booking.selectedPackageId || p.id.startsWith(booking.selectedPackageId)) || packagesList[0] || { id: 'premium' };
+    const initialPkg = packagesList.find(p => p.id === String(booking.selectedPackageId) || p.keyId === booking.selectedPackageId || p.keyId.startsWith(booking.selectedPackageId)) || packagesList[0] || { id: '1', keyId: 'premium' };
     return initialPkg.id;
   });
 
@@ -152,9 +152,9 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
 
   const [showAllBenefits, setShowAllBenefits] = useState<boolean>(false);
 
-  const selectedPkg = packagesList.find(p => p.id === selectedPkgId) || packagesList[1] || packagesList[0] || { id: 'premium', name: 'Premium Wash', price: 120000, description: 'Layanan pembersihan bodi', priceLabel: 'Rp 120.000' };
-  const media = PACKAGE_MEDIA[selectedPkgId] || PACKAGE_MEDIA['premium'];
-  const baseBenefitKey = selectedPkgId.includes('basic') ? 'basic' : selectedPkgId.includes('detailing') ? 'detailing' : 'premium';
+  const selectedPkg = packagesList.find(p => p.id === selectedPkgId) || packagesList[0] || { id: '1', keyId: 'premium', name: 'Premium Wash', price: 120000, description: 'Layanan pembersihan bodi', priceLabel: 'Rp 120.000' };
+  const media = PACKAGE_MEDIA[selectedPkg.keyId] || PACKAGE_MEDIA['premium'];
+  const baseBenefitKey = selectedPkg.keyId.includes('basic') ? 'basic' : selectedPkg.keyId.includes('detailing') ? 'detailing' : 'premium';
   const activeBenefits = PACKAGE_BENEFITS[baseBenefitKey] || PACKAGE_BENEFITS['premium'];
   const displayedBenefits = showAllBenefits ? activeBenefits : activeBenefits.slice(0, 4);
 
@@ -162,7 +162,7 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
     const updates: Partial<BookingState> = {
       selectedPackageId: selectedPkgId
     };
-    if (selectedPkgId !== 'detailing') {
+    if (selectedPkg.keyId !== 'detailing') {
       updates.appliedPromoCode = null;
     }
     onUpdateBooking(updates);

@@ -16,6 +16,7 @@ import TrackingView from './components/TrackingView';
 import HistoryView from './components/HistoryView';
 import AlertsView from './components/AlertsView';
 import ProfileView from './components/ProfileView';
+import TechnicianHomeView from './components/TechnicianHomeView';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -187,69 +188,48 @@ export default function App() {
   };
 
   useEffect(() => {
-
     const checkAuth = async () => {
-  
       try {
-  
-        const token =
-          localStorage.getItem('token');
-  
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role') || 'customer';
         if (!token) {
-  
           setAuthLoading(false);
           return;
-  
         }
-  
-        const response =
-          await api.get('/profile');
-  
-        const currentUser =
-          response.data.user;
-  
+
+        const response = await api.get('/profile');
+        const currentUser = response.data.user;
+
         setUser(currentUser);
-  
+        setUserRole(role as 'customer' | 'technician');
         setIsLoggedIn(true);
 
-        fetchBookings();
-        fetchVehicles();
-        fetchDbPackages();
-        fetchDbOutlets();
-        fetchDbTechnicians();
-        fetchDbPromos();
-        fetchUserAddress();
-  
-        const savedScreen =
-  localStorage.getItem(
-    'currentScreen'
-  );
+        if (role === 'technician') {
+          setCurrentScreen('technician-home');
+        } else {
+          fetchBookings();
+          fetchVehicles();
+          fetchDbPackages();
+          fetchDbOutlets();
+          fetchDbTechnicians();
+          fetchDbPromos();
+          fetchUserAddress();
 
-setCurrentScreen(
-  (savedScreen as any)
-    || 'dashboard'
-);
-  
+          const savedScreen = localStorage.getItem('currentScreen');
+          setCurrentScreen((savedScreen as any) || 'dashboard');
+        }
       } catch (error) {
-  
         console.log(error);
-  
         localStorage.clear();
-  
         setUser(null);
-  
+        setUserRole('customer');
         setIsLoggedIn(false);
-  
       } finally {
-  
         setAuthLoading(false);
-  
       }
-  
     };
-  
+
     checkAuth();
-  
   }, []);
 
   const handleToggleTheme = () => {
@@ -273,41 +253,37 @@ setCurrentScreen(
 
 
   const [currentScreen, setCurrentScreen] = useState<
-    'welcome' | 'login' | 'register' | 'dashboard' | 'booking' | 'details' | 'confirm' | 'payment' | 'success' | 'tracking' | 'history' | 'alerts' | 'profile'
+    'welcome' | 'login' | 'register' | 'dashboard' | 'booking' | 'details' | 'confirm' | 'payment' | 'success' | 'tracking' | 'history' | 'alerts' | 'profile' | 'technician-home'
   >('welcome');
 
   const navigateTo = (
     screen:
-  'welcome'
-  | 'login'
-  | 'register'
-  | 'dashboard'
-  | 'booking'
-  | 'details'
-  | 'confirm'
-  | 'payment'
-  | 'success'
-  | 'tracking'
-  | 'history'
-  | 'alerts'
-  | 'profile'
+    | 'welcome'
+    | 'login'
+    | 'register'
+    | 'dashboard'
+    | 'booking'
+    | 'details'
+    | 'confirm'
+    | 'payment'
+    | 'success'
+    | 'tracking'
+    | 'history'
+    | 'alerts'
+    | 'profile'
+    | 'technician-home'
   ) => {
-  
-    localStorage.setItem(
-      'currentScreen',
-      screen
-    );
-  
+    localStorage.setItem('currentScreen', screen);
     setCurrentScreen(screen);
-  
   };
 
   // Authenticated state
   const [user, setUser] = useState<any>(null);
-  const [isLoggedIn, setIsLoggedIn]
-  = useState(false);
-  const [authLoading, setAuthLoading]
-  = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [userRole, setUserRole] = useState<'customer' | 'technician'>(() => {
+    return (localStorage.getItem('role') as any) || 'customer';
+  });
   const [viewOnlyPackages, _setViewOnlyPackages] = useState<boolean>(() => {
     return localStorage.getItem('viewOnlyPackages') === 'true';
   });
@@ -582,31 +558,32 @@ setCurrentScreen(
   };
 
   const handleLoginSuccess = (
-    loggedUser: any
+    loggedUser: any,
+    role: string = 'customer'
   ) => {
-  
     setUser(loggedUser);
-  
+    setUserRole(role as 'customer' | 'technician');
     setIsLoggedIn(true);
 
-    fetchBookings();
-    fetchVehicles();
-    fetchDbPackages();
-    fetchDbOutlets();
-    fetchDbTechnicians();
-    fetchDbPromos();
-    fetchUserAddress();
-  
-    navigateTo('dashboard');
-  
+    if (role === 'technician') {
+      navigateTo('technician-home');
+    } else {
+      fetchBookings();
+      fetchVehicles();
+      fetchDbPackages();
+      fetchDbOutlets();
+      fetchDbTechnicians();
+      fetchDbPromos();
+      fetchUserAddress();
+      navigateTo('dashboard');
+    }
   };
 
   const handleRegisterSuccess = (
     loggedUser: any
   ) => {
-  
     setUser(loggedUser);
-  
+    setUserRole('customer');
     setIsLoggedIn(true);
 
     fetchBookings();
@@ -616,9 +593,7 @@ setCurrentScreen(
     fetchDbTechnicians();
     fetchDbPromos();
     fetchUserAddress();
-  
     navigateTo('dashboard');
-  
   };
 
   const handleUpdateProfile = (
@@ -752,14 +727,16 @@ setCurrentScreen(
       }
 
       const targetType = booking.vehicleType === 'motor' ? 'roda_2' : 'roda_4';
-      const targetName = 
-        booking.selectedPackageId === 'basic' ? 'Basic' : 
-        booking.selectedPackageId === 'detailing' ? 'Detailing' : 
-        booking.selectedPackageId === 'complete' ? 'Complete' : 
-        booking.selectedPackageId === 'engine' ? 'Engine' : 
-        'Premium';
-      const dbPackage = dbPackages.find(p => p.vehicle_type === targetType && p.name.toLowerCase().includes(targetName.toLowerCase()))
-                        || dbPackages.find(p => p.name.toLowerCase().includes(targetName.toLowerCase()))
+      const dbPackage = dbPackages.find(p => String(p.id) === String(booking.selectedPackageId))
+                        || dbPackages.find(p => p.vehicle_type === targetType && p.name.toLowerCase().includes(booking.selectedPackageId.toLowerCase()))
+                        || dbPackages.find(p => p.name.toLowerCase().includes(booking.selectedPackageId.toLowerCase()))
+                        || dbPackages.find(p => p.vehicle_type === targetType && (
+                             booking.selectedPackageId === 'basic' ? p.name.toLowerCase().includes('basic') :
+                             booking.selectedPackageId === 'detailing' ? p.name.toLowerCase().includes('detail') :
+                             booking.selectedPackageId === 'complete' ? p.name.toLowerCase().includes('complete') :
+                             booking.selectedPackageId === 'engine' ? p.name.toLowerCase().includes('engine') :
+                             p.name.toLowerCase().includes('premium')
+                           ))
                         || dbPackages[0];
       const packageId = dbPackage ? dbPackage.id : 1;
 
@@ -833,27 +810,23 @@ setCurrentScreen(
   };
 
   const handleLogout = () => {
-
     localStorage.clear();
-  
     setUser(null);
-  
+    setUserRole('customer');
     setIsLoggedIn(false);
-  
     navigateTo('login');
-  
   };
 
   // Fetch bookings when switching screens to ensure data is always fresh (e.g. going to history view)
   useEffect(() => {
-    if (isLoggedIn && currentScreen !== 'welcome' && currentScreen !== 'login' && currentScreen !== 'register') {
+    if (isLoggedIn && userRole === 'customer' && currentScreen !== 'welcome' && currentScreen !== 'login' && currentScreen !== 'register') {
       fetchBookings();
     }
-  }, [currentScreen, isLoggedIn]);
+  }, [currentScreen, isLoggedIn, userRole]);
 
   // Global background polling for real-time bookings & notifications & promos
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!isLoggedIn || userRole !== 'customer') return;
 
     fetchBookings(); // Fetch immediately
     fetchDbPromos();
@@ -864,7 +837,7 @@ setCurrentScreen(
     }, 4000); // Poll every 4 seconds globally
 
     return () => clearInterval(interval);
-  }, [isLoggedIn]);
+  }, [isLoggedIn, userRole]);
 
   // Mark all notifications as read when viewing the alerts screen
   useEffect(() => {
@@ -1230,6 +1203,24 @@ setCurrentScreen(
               }}
               booking={booking}
               onSaveLocation={handleSaveLocation}
+            />
+          </motion.div>
+        )}
+
+        {currentScreen === 'technician-home' && (
+          <motion.div
+            key="technician-home"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="min-h-screen flex flex-col"
+          >
+            <TechnicianHomeView 
+              darkMode={darkMode}
+              onToggleTheme={handleToggleTheme}
+              technician={user}
+              onLogout={handleLogout}
             />
           </motion.div>
         )}

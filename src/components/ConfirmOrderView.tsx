@@ -21,15 +21,16 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
   const [showLocationModal, setShowLocationModal] = useState(false);
 
   const targetType = booking.vehicleType === 'motor' ? 'roda_2' : 'roda_4';
-  const targetName = 
-    booking.selectedPackageId === 'basic' ? 'Basic' : 
-    booking.selectedPackageId === 'detailing' ? 'Detailing' : 
-    booking.selectedPackageId === 'complete' ? 'Complete' : 
-    booking.selectedPackageId === 'engine' ? 'Engine' : 
-    'Premium';
-  
-  const selectedPkg = packages.find(p => p.vehicle_type === targetType && p.name.toLowerCase().includes(targetName.toLowerCase()))
-                    || packages.find(p => p.name.toLowerCase().includes(targetName.toLowerCase()))
+  const selectedPkg = packages.find(p => String(p.id) === String(booking.selectedPackageId))
+                    || packages.find(p => p.vehicle_type === targetType && p.name.toLowerCase().includes(booking.selectedPackageId.toLowerCase()))
+                    || packages.find(p => p.name.toLowerCase().includes(booking.selectedPackageId.toLowerCase()))
+                    || packages.find(p => p.vehicle_type === targetType && (
+                         booking.selectedPackageId === 'basic' ? p.name.toLowerCase().includes('basic') :
+                         booking.selectedPackageId === 'detailing' ? p.name.toLowerCase().includes('detail') :
+                         booking.selectedPackageId === 'complete' ? p.name.toLowerCase().includes('complete') :
+                         booking.selectedPackageId === 'engine' ? p.name.toLowerCase().includes('engine') :
+                         p.name.toLowerCase().includes('premium')
+                       ))
                     || packages[0]
                     || { name: 'Premium Wash', price: 120000 };
 
