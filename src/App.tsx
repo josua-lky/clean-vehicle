@@ -187,6 +187,17 @@ export default function App() {
     }
   };
 
+  const fetchProfile = async () => {
+    try {
+      const response = await api.get('/profile');
+      const currentUser = response.data.user;
+      setUser(currentUser);
+      return currentUser;
+    } catch (error) {
+      console.log('Error fetching profile:', error);
+    }
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -197,10 +208,7 @@ export default function App() {
           return;
         }
 
-        const response = await api.get('/profile');
-        const currentUser = response.data.user;
-
-        setUser(currentUser);
+        await fetchProfile();
         setUserRole(role as 'customer' | 'technician');
         setIsLoggedIn(true);
 
@@ -382,6 +390,8 @@ export default function App() {
         promoCode: b.promo?.code,
         serviceAddress: b.service_address || '',
         serviceType: b.service_type || 'home',
+        beforePhoto: b.before_photo || undefined,
+        afterPhoto: b.after_photo || undefined,
         rating: b.review ? Number(b.review.rating) : undefined,
         reviewText: b.review ? b.review.comment : undefined,
         technician: b.technician ? {
@@ -430,15 +440,47 @@ export default function App() {
       // Derive from bookings in response.data
       if (Array.isArray(response.data)) {
         response.data.forEach((b: any) => {
-          // 1. Confirmed / In Progress / Assigned / On Way
-          if (['confirmed', 'assigned', 'on_way', 'in_progress'].includes(b.status)) {
+          // 1. Confirmed / Assigned
+          if (['confirmed', 'assigned'].includes(b.status)) {
             if (notifSettings.bookingConfirmed) {
               derivedNotifs.push({
                 id: `notif-confirmed-${b.id}`,
                 category: 'pesanan',
                 title: 'Pemesanan Dikonfirmasi',
                 time: formatNotifTime(b.updated_at || b.created_at || b.scheduled_at),
-                description: `Pesanan cuci kendaraan (${b.vehicle_name || (b.vehicle ? b.vehicle.brand + ' ' + b.vehicle.model : 'Kendaraan')}) Anda dengan kode ${b.booking_code} telah dikonfirmasi oleh admin. Petugas/teknisi akan segera memproses pencucian sesuai jadwal.`,
+                description: `Pesanan cuci kendaraan (${b.vehicle_name || (b.vehicle ? b.vehicle.brand + ' ' + b.vehicle.model : 'Kendaraan')}) Anda dengan kode ${b.booking_code} telah dikonfirmasi. Petugas/teknisi akan segera memproses pencucian sesuai jadwal.`,
+                idTag: b.booking_code,
+                hasCta: true,
+                ctaText: 'LACAK PROSES'
+              });
+            }
+          }
+
+          // 1b. On Way
+          if (b.status === 'on_way') {
+            if (notifSettings.bookingConfirmed) {
+              derivedNotifs.push({
+                id: `notif-onway-${b.id}`,
+                category: 'pesanan',
+                title: 'Teknisi Menuju Lokasi',
+                time: formatNotifTime(b.updated_at || b.created_at || b.scheduled_at),
+                description: `Teknisi ${b.technician?.name || 'kami'} sedang dalam perjalanan menuju lokasi Anda untuk mencuci kendaraan ${b.vehicle_name || (b.vehicle ? b.vehicle.brand + ' ' + b.vehicle.model : 'Kendaraan')}.`,
+                idTag: b.booking_code,
+                hasCta: true,
+                ctaText: 'LACAK PROSES'
+              });
+            }
+          }
+
+          // 1c. In Progress
+          if (b.status === 'in_progress') {
+            if (notifSettings.bookingConfirmed) {
+              derivedNotifs.push({
+                id: `notif-inprogress-${b.id}`,
+                category: 'pesanan',
+                title: 'Pengerjaan Dimulai',
+                time: formatNotifTime(b.updated_at || b.created_at || b.scheduled_at),
+                description: `Kendaraan ${b.vehicle_name || (b.vehicle ? b.vehicle.brand + ' ' + b.vehicle.model : 'Kendaraan')} Anda sedang dalam proses pencucian oleh teknisi ${b.technician?.name || 'kami'}.`,
                 idTag: b.booking_code,
                 hasCta: true,
                 ctaText: 'LACAK PROSES'
@@ -637,8 +679,16 @@ export default function App() {
       };
       await api.post('/vehicles', payload);
       await fetchVehicles();
-    } catch (error) {
+    } catch (error: any) {
       console.log('Add vehicle error:', error);
+      const errorsObj = error?.response?.data?.errors;
+      let errMsg = error?.response?.data?.message || 'Gagal menambahkan kendaraan.';
+      if (errorsObj && typeof errorsObj === 'object') {
+        const errorMessages = Object.values(errorsObj).flat().join('\n');
+        if (errorMessages) errMsg = errorMessages;
+      }
+      alert(errMsg);
+      throw error;
     }
   };
 
@@ -662,8 +712,16 @@ export default function App() {
         type: type === 'motor' ? 'roda_2' : 'roda_4'
       });
       await fetchVehicles();
-    } catch (error) {
+    } catch (error: any) {
       console.log('Update vehicle error:', error);
+      const errorsObj = error?.response?.data?.errors;
+      let errMsg = error?.response?.data?.message || 'Gagal mengubah kendaraan.';
+      if (errorsObj && typeof errorsObj === 'object') {
+        const errorMessages = Object.values(errorsObj).flat().join('\n');
+        if (errorMessages) errMsg = errorMessages;
+      }
+      alert(errMsg);
+      throw error;
     }
   };
 
@@ -671,8 +729,9 @@ export default function App() {
     try {
       await api.delete(`/vehicles/${id}`);
       await fetchVehicles();
-    } catch (error) {
+    } catch (error: any) {
       console.log('Delete vehicle error:', error);
+      alert('Gagal menghapus kendaraan.');
     }
   };
 
@@ -1087,6 +1146,7 @@ export default function App() {
               paymentMethod={paymentDetails.method}
               onLacak={() => navigateTo('tracking')}
               onHome={() => navigateTo('dashboard')}
+              serviceType={booking.pickupLocation.toLowerCase().includes('outlet') ? 'outlet' : 'home'}
             />
           </motion.div>
         )}
@@ -1221,6 +1281,7 @@ export default function App() {
               onToggleTheme={handleToggleTheme}
               technician={user}
               onLogout={handleLogout}
+              onRefreshProfile={fetchProfile}
             />
           </motion.div>
         )}

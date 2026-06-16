@@ -22,6 +22,7 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
   // Chat history state
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const [lastReadTechMsgCount, setLastReadTechMsgCount] = useState(0);
 
   const isOutlet = (bookingInfo?.service_type || trackedTransaction?.serviceType) === 'outlet';
 
@@ -63,9 +64,9 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
     return () => clearInterval(interval);
   }, [trackedTransaction]);
 
-  // Poll chat messages
+  // Poll chat messages constantly
   useEffect(() => {
-    if (!showChatBox || !trackedTransaction?.id) return;
+    if (!trackedTransaction?.id) return;
 
     const fetchChat = async () => {
       try {
@@ -79,7 +80,18 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
     fetchChat();
     const interval = setInterval(fetchChat, 2000);
     return () => clearInterval(interval);
-  }, [showChatBox, trackedTransaction]);
+  }, [trackedTransaction]);
+
+  // Clear unread badge when chat box is open
+  useEffect(() => {
+    if (showChatBox && chatMessages.length > 0) {
+      const techMsgsCount = chatMessages.filter(m => m.sender_type === 'technician').length;
+      setLastReadTechMsgCount(techMsgsCount);
+    }
+  }, [showChatBox, chatMessages]);
+
+  const techMsgs = chatMessages.filter(m => m.sender_type === 'technician');
+  const unreadCount = showChatBox ? 0 : Math.max(0, techMsgs.length - lastReadTechMsgCount);
 
   // Scroll chat to bottom
   useEffect(() => {
@@ -524,7 +536,7 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
                 </div>
 
                 {/* Technician contact / Outlet route widget */}
-                {isOutlet ? (
+                {isOutlet && (
                   <div className="bg-[#f5f3f6] dark:bg-[#151f32] p-3 rounded-2xl flex items-center justify-between border border-[#e3e2e5] dark:border-gray-800">
                     <div className="flex items-center gap-3">
                       <div className="relative">
@@ -550,45 +562,50 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
                       </a>
                     </div>
                   </div>
-                ) : (
-                  // Technician block
-                  (bookingInfo?.technician || trackedTransaction?.technician) && (
-                    <div className="bg-[#f5f3f6] dark:bg-[#151f32] p-3 rounded-2xl flex items-center justify-between border border-[#e3e2e5] dark:border-gray-800">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                          <img 
-                            alt={techName} 
-                            className="w-12 h-12 rounded-xl object-cover"
-                            src={bookingInfo?.technician?.avatar || trackedTransaction?.technician?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(techName)}&background=1B2337&color=F0C419`}
-                          />
-                          <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
-                        </div>
-                        <div>
-                          <p className="font-bold text-xs text-[#0a2540] dark:text-white">{techName}</p>
-                          <div className="flex items-center gap-0.5">
-                            <span className="material-symbols-outlined text-[#fdc003] text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                            <span className="text-[10px] font-bold text-[#43474d] dark:text-slate-350">
-                              {bookingInfo?.technician?.rating || trackedTransaction?.technician?.rating || '4.9'} • {bookingInfo?.technician?.specialization || trackedTransaction?.technician?.specialization || 'Cuci Specialist'}
-                            </span>
-                          </div>
-                        </div>
+                )}
+
+                {/* Technician block */}
+                {(bookingInfo?.technician || trackedTransaction?.technician) && (
+                  <div className="bg-[#f5f3f6] dark:bg-[#151f32] p-3 rounded-2xl flex items-center justify-between border border-[#e3e2e5] dark:border-gray-800">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <img 
+                          alt={techName} 
+                          className="w-12 h-12 rounded-xl object-cover"
+                          src={bookingInfo?.technician?.avatar || trackedTransaction?.technician?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(techName)}&background=1B2337&color=F0C419`}
+                        />
+                        <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
                       </div>
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => setShowCallAlert(true)}
-                          className="w-10 h-10 rounded-full bg-white dark:bg-gray-800 border border-[#c4c6ce] dark:border-gray-750 flex items-center justify-center text-[#0a2540] dark:text-white active:bg-slate-100 dark:active:bg-gray-700 transition-colors shadow-sm cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">call</span>
-                        </button>
-                        <button 
-                          onClick={() => setShowChatBox(true)}
-                          className="w-10 h-10 rounded-full bg-[#fdc003] flex items-center justify-center text-[#6c5000] active:scale-95 transition-transform shadow-md cursor-pointer border-none"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">chat</span>
-                        </button>
+                      <div>
+                        <p className="font-bold text-xs text-[#0a2540] dark:text-white">{techName}</p>
+                        <div className="flex items-center gap-0.5">
+                          <span className="material-symbols-outlined text-[#fdc003] text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                          <span className="text-[10px] font-bold text-[#43474d] dark:text-slate-350">
+                            {bookingInfo?.technician?.rating || trackedTransaction?.technician?.rating || '4.9'} • {bookingInfo?.technician?.specialization || trackedTransaction?.technician?.specialization || 'Cuci Specialist'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  )
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setShowCallAlert(true)}
+                        className="w-10 h-10 rounded-full bg-white dark:bg-gray-850 border border-[#c4c6ce] dark:border-gray-750 flex items-center justify-center text-[#0a2540] dark:text-white active:bg-slate-100 dark:active:bg-gray-700 transition-colors shadow-sm cursor-pointer border-none"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">call</span>
+                      </button>
+                      <button 
+                        onClick={() => setShowChatBox(true)}
+                        className="w-10 h-10 rounded-full bg-[#fdc003] flex items-center justify-center text-[#6c5000] active:scale-95 transition-transform shadow-md cursor-pointer border-none relative"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">chat</span>
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                            {unreadCount}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 )}
 
                 {/* Vehicle tracking progress bar */}

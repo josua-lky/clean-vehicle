@@ -258,7 +258,7 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
                                   className="text-[9px] font-extrabold text-[#785900] bg-[#ffdf9e] hover:bg-[#ffdf9e]/85 px-3 py-1 rounded-full active:scale-95 transition-all cursor-pointer flex items-center gap-0.5"
                                 >
                                   <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                                  <span>Lacak</span>
+                                  <span>{item.serviceType === 'outlet' ? 'Rute' : 'Lacak'}</span>
                                 </button>
                               )}
                             </div>
@@ -309,6 +309,34 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
                             </p>
                           </div>
 
+                          {(item.beforePhoto || item.afterPhoto) && (
+                            <div className="bg-amber-50/40 dark:bg-amber-955/10 p-3 rounded-2xl border border-amber-100/40 dark:border-amber-950/20 space-y-2 mt-1">
+                              <p className="text-[9px] font-black text-amber-800 dark:text-amber-400 uppercase tracking-wider">Foto Hasil Kerja</p>
+                              <div className="grid grid-cols-2 gap-2">
+                                {item.beforePhoto && (
+                                  <div className="rounded-xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm">
+                                    <p className="text-[8px] font-bold text-center bg-gray-100 dark:bg-gray-800 text-gray-500 py-0.5">Sebelum</p>
+                                    <img 
+                                      src={`http://127.0.0.1:8000/storage/${item.beforePhoto}`} 
+                                      alt="Sebelum Cuci" 
+                                      className="w-full h-20 object-cover"
+                                    />
+                                  </div>
+                                )}
+                                {item.afterPhoto && (
+                                  <div className="rounded-xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm">
+                                    <p className="text-[8px] font-bold text-center bg-gray-100 dark:bg-gray-800 text-gray-500 py-0.5">Sesudah</p>
+                                    <img 
+                                      src={`http://127.0.0.1:8000/storage/${item.afterPhoto}`} 
+                                      alt="Setelah Cuci" 
+                                      className="w-full h-20 object-cover"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
                           {(item.status === 'Dipesan' || item.status === 'Diproses') && (
                             <button
                               type="button"
@@ -320,7 +348,7 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
                               className="w-full mt-2 py-3 bg-[#0a2540] hover:bg-[#0a2540]/90 text-[#fdc003] rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer transition-all text-xs uppercase tracking-wider shadow-sm"
                             >
                               <span className="material-symbols-outlined text-sm">location_on</span>
-                              Lacak Posisi Teknisi (Aktif)
+                              {item.serviceType === 'outlet' ? 'Rute ke Outlet' : 'Lacak Posisi Teknisi (Aktif)'}
                             </button>
                           )}
                           

@@ -46,6 +46,8 @@ export interface Transaction {
   promoCode?: string;
   serviceAddress?: string;
   serviceType?: 'home' | 'outlet';
+  beforePhoto?: string;
+  afterPhoto?: string;
   technician?: {
     id: string;
     name: string;

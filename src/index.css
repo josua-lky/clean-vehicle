@@ -58,6 +58,19 @@ body {
   box-shadow: 0 0 0 1px #0a2540;
 }
 
+/* Eliminate inner browser borders and outlines on borderless inputs/textareas */
+input.border-none,
+textarea.border-none,
+input.border-0,
+textarea.border-0,
+.premium-input-focus input,
+.premium-input-focus textarea {
+  border: none !important;
+  border-width: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .glass-panel {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);

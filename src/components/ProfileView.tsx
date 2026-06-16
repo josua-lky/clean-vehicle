@@ -300,10 +300,6 @@ export default function ProfileView({
       setShowAddModal(false);
     } catch (error: any) {
       console.log(error);
-      alert(
-        error?.response?.data?.message ||
-        'Gagal menambahkan kendaraan'
-      );
     }
   };
 

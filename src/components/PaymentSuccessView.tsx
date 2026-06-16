@@ -6,9 +6,10 @@ interface PaymentSuccessViewProps {
   paymentMethod: string;
   onLacak: () => void;
   onHome: () => void;
+  serviceType?: 'home' | 'outlet';
 }
 
-export default function PaymentSuccessView({ amountPaid, paymentMethod, onLacak, onHome }: PaymentSuccessViewProps) {
+export default function PaymentSuccessView({ amountPaid, paymentMethod, onLacak, onHome, serviceType }: PaymentSuccessViewProps) {
   // Generate random order id
   const orderId = '#CV-982' + Math.floor(1000 + Math.random() * 9000);
 
@@ -100,7 +101,7 @@ export default function PaymentSuccessView({ amountPaid, paymentMethod, onLacak,
           onClick={onLacak}
           className="w-full bg-[#fdc003] hover:bg-[#fabd00] text-[#6c5000] font-bold py-4 rounded-xl shadow-lg transition-all duration-200 flex justify-center items-center gap-2 text-sm uppercase tracking-wider cursor-pointer"
         >
-          <span>Lacak Pesanan</span>
+          <span>{serviceType === 'outlet' ? 'Rute ke Outlet' : 'Lacak Pesanan'}</span>
           <span className="material-symbols-outlined !text-[20px]">near_me</span>
         </motion.button>
 
