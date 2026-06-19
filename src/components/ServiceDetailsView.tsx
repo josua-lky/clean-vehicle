@@ -114,7 +114,10 @@ interface ServiceDetailsViewProps {
 }
 
 export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, onBack, userAvatar, packages, viewOnly }: ServiceDetailsViewProps) {
-  const targetType = booking.vehicleType === 'motor' ? 'roda_2' : 'roda_4';
+  const [vehicleTypeFilter, setVehicleTypeFilter] = useState<'mobil' | 'motor'>(
+    booking.vehicleType || 'mobil'
+  );
+  const targetType = vehicleTypeFilter === 'motor' ? 'roda_2' : 'roda_4';
   const filteredPackages = useMemo(() => {
     return packages.filter(p => p.vehicle_type === targetType || p.vehicle_type === 'all');
   }, [packages, targetType]);
@@ -134,7 +137,8 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
         description: p.description || 'Layanan pembersihan bodi',
         price: Number(p.price),
         priceLabel: `Rp ${Number(p.price).toLocaleString('id-ID')}`,
-        isBestSeller: p.sort_order === 2
+        isBestSeller: p.sort_order === 2,
+        durationMinutes: p.duration_minutes || 45
       };
     });
   }, [filteredPackages]);
@@ -152,7 +156,7 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
 
   const [showAllBenefits, setShowAllBenefits] = useState<boolean>(false);
 
-  const selectedPkg = packagesList.find(p => p.id === selectedPkgId) || packagesList[0] || { id: '1', keyId: 'premium', name: 'Premium Wash', price: 120000, description: 'Layanan pembersihan bodi', priceLabel: 'Rp 120.000' };
+  const selectedPkg = packagesList.find(p => p.id === selectedPkgId) || packagesList[0] || { id: '1', keyId: 'premium', name: 'Premium Wash', price: 120000, description: 'Layanan pembersihan bodi', priceLabel: 'Rp 120.000', durationMinutes: 45 };
   const media = PACKAGE_MEDIA[selectedPkg.keyId] || PACKAGE_MEDIA['premium'];
   const baseBenefitKey = selectedPkg.keyId.includes('basic') ? 'basic' : selectedPkg.keyId.includes('detailing') ? 'detailing' : 'premium';
   const activeBenefits = PACKAGE_BENEFITS[baseBenefitKey] || PACKAGE_BENEFITS['premium'];
@@ -160,7 +164,8 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
 
   const handleNext = () => {
     const updates: Partial<BookingState> = {
-      selectedPackageId: selectedPkgId
+      selectedPackageId: selectedPkgId,
+      vehicleType: vehicleTypeFilter
     };
     if (selectedPkg.keyId !== 'detailing') {
       updates.appliedPromoCode = null;
@@ -238,21 +243,57 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
         <div className="px-5 -mt-6 relative z-10">
           
           {/* Quick Stats Panel block */}
-          <section className="bg-white rounded-2xl p-4 shadow-lg flex justify-around items-center mb-6 border border-[#efedf0]">
+          <section className="bg-white rounded-2xl p-4 shadow-lg flex justify-center items-center mb-6 border border-[#efedf0]">
             <div className="flex flex-col items-center">
               <span className="material-symbols-outlined text-[#785900] mb-1">timer</span>
               <span className="text-[10px] uppercase text-[#74777e] font-extrabold tracking-wide">DURATION</span>
-              <span className="font-extrabold text-sm text-[#000f22] mt-0.5">60-90 Menit</span>
-            </div>
-            <div className="w-px h-10 bg-[#efedf0]"></div>
-            <div className="flex flex-col items-center">
-              <span className="material-symbols-outlined text-[#785900] mb-1">star</span>
-              <span className="text-[10px] uppercase text-[#74777e] font-extrabold tracking-wide">RATING</span>
-              <span className="font-extrabold text-sm text-[#000f22] mt-0.5">4.9/5.0</span>
+              <span className="font-extrabold text-sm text-[#000f22] mt-0.5">{selectedPkg.durationMinutes} Menit</span>
             </div>
           </section>
 
           {/* Service Location Card removed to keep page focused on package details */}
+
+          {/* Vehicle Type Filter Section */}
+          <section className="mb-6">
+            <h3 className="text-sm font-black text-[#74777e] uppercase tracking-wider mb-3 ml-1">Kategori Kendaraan</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                type="button"
+                onClick={() => {
+                  setVehicleTypeFilter('mobil');
+                  onUpdateBooking({ vehicleType: 'mobil' });
+                }}
+                className={`flex items-center gap-4 p-4 rounded-2xl shadow-sm border transition-all cursor-pointer ${
+                  vehicleTypeFilter === 'mobil' 
+                    ? 'bg-white border-[#fdc003] ring-1 ring-[#fdc003]' 
+                    : 'bg-white border-transparent hover:bg-slate-50'
+                }`}
+              >
+                <div className="h-10 w-10 bg-[#ffdf9e]/30 rounded-full flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[#785900] text-2xl">directions_car</span>
+                </div>
+                <span className="font-extrabold text-sm text-[#000f22]">Mobil</span>
+              </button>
+
+              <button 
+                type="button"
+                onClick={() => {
+                  setVehicleTypeFilter('motor');
+                  onUpdateBooking({ vehicleType: 'motor' });
+                }}
+                className={`flex items-center gap-4 p-4 rounded-2xl shadow-sm border transition-all cursor-pointer ${
+                  vehicleTypeFilter === 'motor' 
+                    ? 'bg-white border-[#fdc003] ring-1 ring-[#fdc003]' 
+                    : 'bg-white border-transparent hover:bg-slate-50'
+                }`}
+              >
+                <div className="h-10 w-10 bg-[#ffdf9e]/30 rounded-full flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[#785900] text-2xl">motorcycle</span>
+                </div>
+                <span className="font-extrabold text-sm text-[#000f22]">Motor</span>
+              </button>
+            </div>
+          </section>
 
           {/* Package Selection Lists */}
           <section className="mb-6">

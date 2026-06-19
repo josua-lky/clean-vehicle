@@ -34,17 +34,36 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
   const [showTopUpModal, setShowTopUpModal] = useState<boolean>(false);
   const [topUpAmount, setTopUpAmount] = useState<string>('');
   const [topUpLoading, setTopUpLoading] = useState<boolean>(false);
+  const [topUpStatus, setTopUpStatus] = useState<{
+    show: boolean;
+    type: 'success' | 'pending' | 'error';
+    amount?: number;
+    message: string;
+  }>({ show: false, type: 'success', message: '' });
+
+  const normalizePhone = (phone: string) => {
+    let clean = phone.replace(/[^0-9+]/g, '');
+    if (clean.startsWith('+62')) {
+      clean = '0' + clean.slice(3);
+    } else if (clean.startsWith('62')) {
+      clean = '0' + clean.slice(2);
+    } else if (!clean.startsWith('0') && clean.length > 0) {
+      clean = '0' + clean;
+    }
+    return clean;
+  };
 
   const fetchOnoBalance = async () => {
     if (!userPhone) return;
     setOnoLoading(true);
     setOnoError(null);
     try {
+      const cleanPhone = normalizePhone(userPhone);
       // 1. Check if user exists on OnoPay
       const checkUserRes = await fetch('http://onopay.web.id/api/v1/merchant/check-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ phone_number: userPhone })
+        body: JSON.stringify({ phone_number: cleanPhone })
       });
       const checkUserData = await checkUserRes.json();
       
@@ -61,7 +80,7 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
       const checkBalRes = await fetch('http://onopay.web.id/api/v1/merchant/check-balance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ phone_number: userPhone })
+        body: JSON.stringify({ phone_number: cleanPhone })
       });
       const checkBalData = await checkBalRes.json();
       if (checkBalRes.ok && checkBalData.success) {
@@ -82,7 +101,8 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
     setOnoLoading(true);
     setOnoError(null);
     try {
-      const regRes = await api.post('/profile/register-onopay', { phone: userPhone });
+      const cleanPhone = normalizePhone(userPhone);
+      const regRes = await api.post('/profile/register-onopay', { phone: cleanPhone });
       if (regRes.data.success) {
         await fetchOnoBalance();
       } else {
@@ -100,29 +120,46 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
     if (!userPhone || isNaN(amount) || amount <= 0) return;
     setTopUpLoading(true);
     try {
+      const cleanPhone = normalizePhone(userPhone);
       const topupRes = await fetch('http://onopay.web.id/api/v1/payment/topup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ phone_number: userPhone, amount })
+        body: JSON.stringify({ phone_number: cleanPhone, amount })
       });
       const topupData = await topupRes.json();
       if (topupRes.ok && topupData.success) {
         if (topupData.data && topupData.data.status === 'pending') {
-          alert(`Top Up sebesar Rp ${amount.toLocaleString('id-ID')} berhasil diajukan dan sedang menunggu persetujuan admin OnoPay.`);
+          setTopUpStatus({
+            show: true,
+            type: 'pending',
+            amount,
+            message: 'Top up berhasil diajukan dan sedang menunggu persetujuan admin OnoPay.'
+          });
         } else {
-          alert(`Top Up sukses! Saldo Anda bertambah Rp ${amount.toLocaleString('id-ID')}`);
-          if (topupData.data && topupData.data.new_balance !== undefined) {
-            setOnoBalance(Number(topupData.data.new_balance));
-          }
+          setTopUpStatus({
+            show: true,
+            type: 'success',
+            amount,
+            message: 'Saldo OnoPay Anda telah berhasil ditambahkan.'
+          });
         }
+        await fetchOnoBalance(); // Always refresh balance from server!
         setShowTopUpModal(false);
         setTopUpAmount('');
       } else {
-        alert(topupData.message || 'Gagal melakukan top up.');
+        setTopUpStatus({
+          show: true,
+          type: 'error',
+          message: topupData.message || 'Gagal melakukan top up.'
+        });
       }
     } catch (err: any) {
       console.error('Top up error:', err);
-      alert('Terjadi kesalahan koneksi saat top up.');
+      setTopUpStatus({
+        show: true,
+        type: 'error',
+        message: 'Terjadi kesalahan koneksi saat top up.'
+      });
     } finally {
       setTopUpLoading(false);
     }
@@ -584,10 +621,6 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
                     src={pkg.imgUrl}
                     alt={pkg.name}
                   />
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                    <span className="material-symbols-outlined text-amber-500 text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                    <span className="text-[10px] font-extrabold text-[#000f22]">{pkg.rating}</span>
-                  </div>
                 </div>
                 <div className="p-4 flex flex-col justify-between flex-grow">
                   <div>
@@ -596,18 +629,6 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
                   </div>
                   <div className="flex items-center justify-between mt-4">
                     <span className="text-base font-extrabold text-[#000f22]">{pkg.priceLabel}</span>
-                    <button 
-                      onClick={() => {
-                        onUpdateBooking({
-                          selectedPackageId: pkg.id,
-                          vehicleType: vehicleType
-                        });
-                        onBookService('rumah');
-                      }}
-                      className="h-8 w-8 bg-[#000f22] hover:bg-black rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-sm">add</span>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -740,7 +761,11 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
                   onClick={() => {
                     const amt = Number(topUpAmount);
                     if (isNaN(amt) || amt < 1000) {
-                      alert('Nominal top up minimal Rp 1.000');
+                      setTopUpStatus({
+                        show: true,
+                        type: 'error',
+                        message: 'Nominal top up minimal Rp 1.000'
+                      });
                       return;
                     }
                     handleTopUpSubmit(amt);
@@ -761,6 +786,67 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
                   )}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+
+        {topUpStatus.show && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-[#000f22]/60 backdrop-blur-sm"
+              onClick={() => setTopUpStatus(prev => ({ ...prev, show: false }))}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 15 }}
+              transition={{ type: 'spring', duration: 0.4 }}
+              className="bg-white dark:bg-[#111827] rounded-[2rem] p-6 w-full max-w-sm relative z-10 shadow-2xl border border-slate-100 dark:border-gray-850 text-center space-y-4"
+            >
+              {topUpStatus.type === 'success' && (
+                <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto ring-4 ring-emerald-100 dark:ring-emerald-950/20 animate-bounce">
+                  <span className="material-symbols-outlined text-3xl font-black">check_circle</span>
+                </div>
+              )}
+              {topUpStatus.type === 'pending' && (
+                <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/30 text-amber-500 rounded-full flex items-center justify-center mx-auto ring-4 ring-amber-100 dark:ring-amber-950/20 animate-pulse">
+                  <span className="material-symbols-outlined text-3xl font-black">schedule</span>
+                </div>
+              )}
+              {topUpStatus.type === 'error' && (
+                <div className="w-16 h-16 bg-red-50 dark:bg-red-950/30 text-red-500 rounded-full flex items-center justify-center mx-auto ring-4 ring-red-100 dark:ring-red-950/20">
+                  <span className="material-symbols-outlined text-3xl font-black">error</span>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <h4 className="font-extrabold text-base text-[#0a2540] dark:text-white">
+                  {topUpStatus.type === 'success' ? 'Top Up Berhasil!' : 
+                   topUpStatus.type === 'pending' ? 'Top Up Diajukan' : 'Top Up Gagal'}
+                </h4>
+                <p className="text-xs text-[#43474d] dark:text-slate-400 leading-normal font-semibold">
+                  {topUpStatus.message}
+                </p>
+              </div>
+
+              {topUpStatus.amount !== undefined && topUpStatus.amount > 0 && (
+                <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-100 dark:border-gray-800 text-xs font-black text-[#0a2540] dark:text-white flex justify-between items-center">
+                  <span className="text-[#74777e] dark:text-slate-400 font-bold">Nominal Top Up</span>
+                  <span className="text-base text-[#785900] dark:text-[#fdc003]">
+                    Rp {topUpStatus.amount.toLocaleString('id-ID')}
+                  </span>
+                </div>
+              )}
+
+              <button
+                onClick={() => setTopUpStatus(prev => ({ ...prev, show: false }))}
+                className="w-full bg-[#fdc003] hover:bg-[#fabd00] text-[#6c5000] font-black text-xs py-3.5 rounded-xl active:scale-95 transition-all cursor-pointer flex items-center justify-center shadow-md border-none"
+              >
+                Selesai
+              </button>
             </motion.div>
           </div>
         )}

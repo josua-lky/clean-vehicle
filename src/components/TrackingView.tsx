@@ -21,8 +21,10 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
   const [bookingInfo, setBookingInfo] = useState<any>(null);
   // Chat history state
   const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatLoaded, setChatLoaded] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const [lastReadTechMsgCount, setLastReadTechMsgCount] = useState(0);
+  const [showMapModal, setShowMapModal] = useState(false);
 
   const isOutlet = (bookingInfo?.service_type || trackedTransaction?.serviceType) === 'outlet';
 
@@ -72,6 +74,7 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
       try {
         const response = await api.get(`/bookings/${trackedTransaction.id}/chat`);
         setChatMessages(response.data || []);
+        setChatLoaded(true);
       } catch (err) {
         console.log('Error fetching chat messages:', err);
       }
@@ -276,7 +279,7 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
 
         {/* Modal: Interactive Live Call Alert */}
         {showCallAlert && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-5">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-5">
             <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 text-center max-w-xs w-full shadow-2xl border border-slate-100 dark:border-gray-800 animate-scale-in">
               <div className="w-16 h-16 bg-green-50 dark:bg-green-950/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                 <span className="material-symbols-outlined text-green-500 text-3xl">call</span>
@@ -303,7 +306,7 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
 
         {/* Modal: Live Chat messaging dialog system */}
         {showChatBox && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-50">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-[100]">
             <div className="bg-white dark:bg-[#111827] rounded-t-[2rem] w-full max-w-md shadow-2xl flex flex-col h-[70vh] border-t border-[#efedf0] dark:border-gray-800 animate-fade-up">
               {/* Chat Title bar */}
               <div className="p-4 border-b border-[#efedf0] dark:border-gray-800 flex justify-between items-center bg-[#f5f3f6] dark:bg-[#1f2937] rounded-t-[2rem]">
@@ -321,8 +324,11 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
 
               {/* Message history */}
               <div className="flex-grow p-4 overflow-y-auto space-y-3 bg-[#faf9fb] dark:bg-[#0a0f1d]">
-                {chatMessages.length === 0 && (
-                  <div className="text-center py-10 text-xs text-gray-400 font-semibold">Memuat pesan...</div>
+                {!chatLoaded && chatMessages.length === 0 && (
+                  <div className="text-center py-10 text-xs text-gray-400 font-semibold animate-pulse">Memuat pesan...</div>
+                )}
+                {chatLoaded && chatMessages.length === 0 && (
+                  <div className="text-center py-10 text-xs text-slate-400 dark:text-slate-500 font-bold">Belum ada percakapan. Kirim pesan untuk memulai.</div>
                 )}
                 {chatMessages.map((item, index) => {
                   const isUser = item.sender_type === 'customer';
@@ -630,12 +636,24 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
                   </div>
                 </div>
 
+                {/* Lacak Posisi Teknisi Button */}
+                {!isOutlet && ['on_way', 'in_progress'].includes(txStatus) && (
+                  <button
+                    type="button"
+                    onClick={() => setShowMapModal(true)}
+                    className="w-full mt-1.5 py-3 bg-[#fdc003] hover:bg-[#fabd00] text-[#6c5000] rounded-2xl font-bold text-[11px] cursor-pointer active:scale-95 transition-all text-center flex items-center justify-center gap-1.5 uppercase tracking-wider shadow-sm border-none"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">directions_car</span>
+                    Lacak Posisi Teknisi
+                  </button>
+                )}
+
                 {/* Batalkan Pesanan Button */}
                 {!['completed', 'cancelled'].includes(txStatus) && (
                   <button
                     type="button"
                     onClick={() => setShowCancelModal(true)}
-                    className="w-full mt-1.5 py-3 border border-red-200 dark:border-red-950/30 hover:bg-neutral-50 dark:hover:bg-red-950/10 text-red-650 text-red-650 dark:text-red-400 rounded-2xl font-bold text-[11px] cursor-pointer active:scale-95 transition-all text-center flex items-center justify-center gap-1.5 uppercase tracking-wider shadow-sm bg-transparent"
+                    className="w-full mt-1.5 py-3 border border-red-200 dark:border-red-950/30 hover:bg-neutral-50 dark:hover:bg-red-950/10 text-red-650 dark:text-red-400 rounded-2xl font-bold text-[11px] cursor-pointer active:scale-95 transition-all text-center flex items-center justify-center gap-1.5 uppercase tracking-wider shadow-sm bg-transparent"
                   >
                     <span className="material-symbols-outlined text-[15px]">cancel</span>
                     Batalkan Pesanan Cuci
@@ -649,7 +667,7 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
 
         {/* Modal: Confirmation to Cancel Order */}
         {showCancelModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-5">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-5">
             <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 text-center max-w-xs w-full shadow-2xl border border-slate-100 dark:border-gray-850 animate-scale-in">
               <div className="w-16 h-16 bg-red-50 dark:bg-red-950/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
                 <span className="material-symbols-outlined text-3xl">warning</span>
@@ -679,6 +697,101 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
             </div>
           </div>
         )}
+
+        {/* Modal: Live Map for Technician Location */}
+        <AnimatePresence>
+          {showMapModal && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100] p-5">
+              <div className="bg-white dark:bg-[#111827] rounded-[2rem] p-6 max-w-sm w-full shadow-2xl border border-slate-100 dark:border-gray-800 space-y-4">
+                
+                <div className="flex justify-between items-center pb-2 border-b border-slate-105 dark:border-gray-850">
+                  <h4 className="font-extrabold text-base text-[#0a2540] dark:text-white flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[#fdc003]">location_on</span>
+                    Posisi Real-time Teknisi
+                  </h4>
+                  <button 
+                    onClick={() => setShowMapModal(false)}
+                    className="text-gray-400 hover:text-gray-655 dark:hover:text-white bg-transparent border-none cursor-pointer p-1"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+
+                {/* Simulated Map */}
+                <div className="relative w-full h-64 rounded-2xl overflow-hidden border border-slate-200 dark:border-gray-800 bg-slate-105">
+                  <div 
+                    className="w-full h-full grayscale-[0.1] brightness-[1.01] dark:brightness-[0.85] transition-all" 
+                    style={{ 
+                      backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17')",
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    }}
+                  />
+                  
+                  {/* Pin Destination - Lokasi Customer */}
+                  <div className="absolute top-[35%] left-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                    <div className="bg-[#0a2540] dark:bg-slate-900 text-white p-2 rounded-full shadow-lg mb-1 ring-4 ring-white/50">
+                      <span className="material-symbols-outlined block text-[14px]">home</span>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded-full shadow-sm">
+                      <p className="text-[7px] font-bold text-slate-650 dark:text-slate-300 uppercase">Lokasi Anda</p>
+                    </div>
+                  </div>
+
+                  {/* Live Pin - Lokasi Teknisi */}
+                  {(!techLat || !techLng || (techLat === 0 && techLng === 0)) ? (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-center p-4">
+                      <div className="bg-white dark:bg-slate-900 p-3 rounded-xl shadow-md space-y-1">
+                        <span className="material-symbols-outlined text-red-500 animate-pulse">gps_off</span>
+                        <p className="text-[10px] font-bold text-slate-700 dark:text-slate-200">GPS Teknisi Tidak Aktif</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div 
+                      className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-1000 ease-out"
+                      style={{ top: techPinStyle.top, left: techPinStyle.left }}
+                    >
+                      <div className="bg-[#fdc003] text-[#6c5000] p-2.5 rounded-full shadow-lg mb-1 ring-4 ring-white/50 animate-bounce">
+                        <span className="material-symbols-outlined block text-[18px]">electric_car</span>
+                      </div>
+                      <div className="bg-white dark:bg-slate-800 px-2 py-0.5 rounded-full shadow-sm">
+                        <p className="text-[8px] font-bold text-[#0a2540] dark:text-white uppercase tracking-wider font-extrabold">Teknisi (Live)</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Technician Info */}
+                <div className="bg-[#f8f7f9] dark:bg-[#151f32]/60 p-4 rounded-2xl space-y-2 text-xs font-semibold">
+                  <div className="flex justify-between items-center text-slate-650 dark:text-slate-355">
+                    <span className="text-gray-500">Nama Teknisi</span>
+                    <span className="text-[#0a2540] dark:text-white font-extrabold">{techName}</span>
+                  </div>
+                  {techLat && techLng && (
+                    <div className="flex justify-between items-center text-slate-655 dark:text-slate-355">
+                      <span className="text-gray-500">Koordinat</span>
+                      <span className="font-mono text-slate-700 dark:text-slate-300">
+                        {techLat.toFixed(6)}, {techLng.toFixed(6)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center text-slate-655 dark:text-slate-355">
+                    <span className="text-gray-500">Status</span>
+                    <span className="text-[#fdc003] font-bold uppercase tracking-wider">{txStatus === 'on_way' ? 'Menuju Lokasi' : 'Sedang Bekerja'}</span>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setShowMapModal(false)}
+                  className="w-full py-3 bg-[#f5f3f6] dark:bg-gray-800 text-[#43474d] dark:text-white rounded-xl font-bold text-xs cursor-pointer border-none hover:bg-slate-100 dark:hover:bg-gray-700"
+                >
+                  Tutup
+                </button>
+
+              </div>
+            </div>
+          )}
+        </AnimatePresence>
 
       </main>
 

@@ -79,7 +79,8 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
       specialties: t.specialization ? [t.specialization === 'motor' ? 'Motor' : 'Mobil', t.area || 'All Rounder'] : ['Pembersihan', 'Detil Luar'],
       specialization: t.specialization,
       outletId: t.outlet_id ? String(t.outlet_id) : null,
-      status: t.status === 'active' ? 'Tersedia' : 'Sibuk'
+      status: t.status === 'active' ? 'Tersedia' : 'Sibuk',
+      rawBookings: t.bookings || []
     }));
   }, [technicians]);
 
@@ -101,16 +102,7 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
     });
   }, [mappedTechs, booking.vehicleType, washType, selectedOutletId]);
 
-  useEffect(() => {
-    if (selectedTech) {
-      const exists = filteredTechs.some(tech => tech.id === selectedTech);
-      if (!exists) {
-        setSelectedTech(filteredTechs[0]?.id || '');
-      }
-    } else if (filteredTechs.length > 0) {
-      setSelectedTech(filteredTechs[0]?.id || '');
-    }
-  }, [filteredTechs, selectedTech]);
+
 
   const [isTechExpanded, setIsTechExpanded] = useState<boolean>(false);
   const displayedTechs = isTechExpanded ? filteredTechs : filteredTechs.slice(0, 3);
@@ -208,6 +200,50 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
   const displayedTimes = isTimeExpanded ? filteredAllTimes : filteredBaseTimes;
 
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>(booking.selectedTime || '');
+
+  const isTechBusyAtSelectedTime = (techBookings: any[]) => {
+    if (!selectedDate || !selectedTimeSlot) return false;
+    try {
+      const monthsIndo = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      const parts = selectedDate.split(' ');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10);
+        const monthName = parts[1];
+        const year = parseInt(parts[2], 10);
+        const monthIndex = monthsIndo.indexOf(monthName);
+        if (monthIndex !== -1) {
+          const [hour, minute] = selectedTimeSlot.split(':').map(Number);
+          const targetDateObj = new Date(year, monthIndex, day, hour, minute, 0, 0);
+          const targetTime = targetDateObj.getTime();
+
+          return (techBookings || []).some((b: any) => {
+            const bookingDateObj = new Date(b.scheduled_at);
+            bookingDateObj.setSeconds(0, 0);
+            bookingDateObj.setMilliseconds(0);
+            return bookingDateObj.getTime() === targetTime;
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing selected date:', e);
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    const availableTechs = filteredTechs.filter(tech => !isTechBusyAtSelectedTime(tech.rawBookings));
+    if (selectedTech) {
+      const isSelectedTechAvailable = availableTechs.some(tech => tech.id === selectedTech);
+      if (!isSelectedTechAvailable) {
+        setSelectedTech(availableTechs[0]?.id || '');
+      }
+    } else if (availableTechs.length > 0) {
+      setSelectedTech(availableTechs[0]?.id || '');
+    }
+  }, [filteredTechs, selectedTech, selectedDate, selectedTimeSlot]);
 
   const [packages, setPackages]
   = useState<any[]>([]);
@@ -522,47 +558,63 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
                 </p>
               </div>
             ) : (
-              displayedTechs.map((tech) => (
-                <div 
-                  key={tech.id}
-                  onClick={() => setSelectedTech(tech.id)}
-                  className={`p-4 rounded-2xl bg-white border flex gap-4 cursor-pointer hover:shadow-md transition-all ${
-                    selectedTech === tech.id ? 'border-[#fdc003] ring-1 ring-[#fdc003]' : 'border-transparent shadow-sm'
-                  }`}
-                >
-                  <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0">
-                    <img 
-                      alt={tech.name} 
-                      className="w-full h-full object-cover"
-                      src={tech.avatar}
-                    />
-                  </div>
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="text-sm font-extrabold text-[#000f22]">{tech.name}</h4>
-                        <div className="flex items-center gap-1 text-[#785900] mt-1">
-                          <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                          <span className="text-xs font-bold">{tech.rating}</span>
-                          <span className="text-[#74777e] text-[10px] ml-1">({tech.reviewsCount} Review)</span>
+              displayedTechs.map((tech) => {
+                const isBusy = isTechBusyAtSelectedTime(tech.rawBookings);
+                const isSelected = selectedTech === tech.id;
+                return (
+                  <div 
+                    key={tech.id}
+                    onClick={() => {
+                      if (!isBusy) {
+                        setSelectedTech(tech.id);
+                      }
+                    }}
+                    className={`p-4 rounded-2xl bg-white border flex gap-4 transition-all ${
+                      isBusy 
+                        ? 'opacity-65 cursor-not-allowed border-[#efedf0] bg-slate-50 shadow-none'
+                        : isSelected 
+                          ? 'border-[#fdc003] ring-1 ring-[#fdc003] cursor-pointer hover:shadow-md' 
+                          : 'border-transparent shadow-sm cursor-pointer hover:shadow-md'
+                    }`}
+                  >
+                    <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0">
+                      <img 
+                        alt={tech.name} 
+                        className="w-full h-full object-cover"
+                        src={tech.avatar}
+                      />
+                    </div>
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="text-sm font-extrabold text-[#000f22]">{tech.name}</h4>
+                          <div className="flex items-center gap-1 text-[#785900] mt-1">
+                            <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                            <span className="text-xs font-bold">{tech.rating}</span>
+                            <span className="text-[#74777e] text-[10px] ml-1">({tech.reviewsCount} Review)</span>
+                          </div>
                         </div>
-                      </div>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        tech.status === 'Tersedia' ? 'bg-green-50 text-emerald-700' : 'bg-red-50 text-red-700'
-                      }`}>
-                        {tech.status}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex gap-1.5 flex-wrap">
-                      {tech.specialties.map((spec: string) => (
-                        <span key={spec} className="px-2 py-0.5 bg-[#f5f3f6] rounded-full text-[9px] font-bold text-[#74777e] border border-[#e3e2e5]">
-                          {spec}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          isBusy 
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : tech.status === 'Tersedia' 
+                              ? 'bg-green-50 text-emerald-700' 
+                              : 'bg-red-50 text-red-700'
+                        }`}>
+                          {isBusy ? 'Sudah Ada Booking' : tech.status}
                         </span>
-                      ))}
+                      </div>
+                      <div className="mt-2 flex gap-1.5 flex-wrap">
+                        {tech.specialties.map((spec: string) => (
+                          <span key={spec} className="px-2 py-0.5 bg-[#f5f3f6] rounded-full text-[9px] font-bold text-[#74777e] border border-[#e3e2e5]">
+                            {spec}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </section>

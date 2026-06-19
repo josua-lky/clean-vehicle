@@ -25,6 +25,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
 
   // Camera upload state for completion (both before/after photos)
   const [selectedBookingForPhoto, setSelectedBookingForPhoto] = useState<any | null>(null);
+  const [photoUploadMode, setPhotoUploadMode] = useState<'before' | 'after' | null>(null);
   const [beforePhotoFile, setBeforePhotoFile] = useState<File | null>(null);
   const [beforePhotoPreview, setBeforePhotoPreview] = useState<string | null>(null);
   const [afterPhotoFile, setAfterPhotoFile] = useState<File | null>(null);
@@ -92,13 +93,24 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
             );
           } else {
             const oldB = prev.find((p: any) => p.id === b.id);
-            if (oldB && oldB.status !== 'cancelled' && b.status === 'cancelled') {
-              addTechnicianNotification(
-                `VW-CANCEL-${b.id}`,
-                'Pesanan Dibatalkan',
-                `Pesanan dengan kode ${b.booking_code} telah dibatalkan oleh pelanggan/admin.`,
-                b.booking_code
-              );
+            if (oldB) {
+              if (oldB.status !== 'cancelled' && b.status === 'cancelled') {
+                addTechnicianNotification(
+                  `VW-CANCEL-${b.id}`,
+                  'Pesanan Dibatalkan',
+                  `Pesanan dengan kode ${b.booking_code} telah dibatalkan oleh pelanggan/admin.`,
+                  b.booking_code
+                );
+              }
+              // Check if customer submitted a review
+              if (!oldB.review && b.review) {
+                addTechnicianNotification(
+                  `VW-REVIEW-${b.id}`,
+                  'Ulasan & Rating Diterima',
+                  `Pelanggan memberikan rating ${b.review.rating} bintang untuk pesanan ${b.booking_code}. "${b.review.comment || 'Tanpa komentar.'}"`,
+                  b.booking_code
+                );
+              }
             }
           }
         });
@@ -212,11 +224,19 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
   };
 
   const handleUpdateStatus = async (bookingId: number, nextStatus: 'confirmed' | 'on_way' | 'in_progress' | 'completed') => {
-    if (nextStatus === 'completed') {
-      const booking = bookings.find(b => b.id === bookingId);
+    const booking = bookings.find(b => b.id === bookingId);
+
+    if (nextStatus === 'in_progress') {
       setSelectedBookingForPhoto(booking);
+      setPhotoUploadMode('before');
       setBeforePhotoFile(null);
       setBeforePhotoPreview(null);
+      return;
+    }
+
+    if (nextStatus === 'completed') {
+      setSelectedBookingForPhoto(booking);
+      setPhotoUploadMode('after');
       setAfterPhotoFile(null);
       setAfterPhotoPreview(null);
       return;
@@ -252,14 +272,27 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
   };
 
   const handleUploadPhotoAndSubmit = async () => {
-    if (!beforePhotoFile || !afterPhotoFile || !selectedBookingForPhoto) return;
+    if (!selectedBookingForPhoto || !photoUploadMode) return;
 
     try {
       setUploadingPhoto(true);
       const formData = new FormData();
-      formData.append('status', 'completed');
-      formData.append('before_photo', beforePhotoFile);
-      formData.append('after_photo', afterPhotoFile);
+
+      if (photoUploadMode === 'before') {
+        if (!beforePhotoFile) {
+          alert('Silakan ambil/pilih foto sebelum pengerjaan terlebih dahulu.');
+          return;
+        }
+        formData.append('status', 'in_progress');
+        formData.append('before_photo', beforePhotoFile);
+      } else {
+        if (!afterPhotoFile) {
+          alert('Silakan ambil/pilih foto sesudah pengerjaan terlebih dahulu.');
+          return;
+        }
+        formData.append('status', 'completed');
+        formData.append('after_photo', afterPhotoFile);
+      }
 
       await api.post(`/technician/bookings/${selectedBookingForPhoto.id}/status`, formData, {
         headers: {
@@ -268,13 +301,14 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
       });
 
       setSelectedBookingForPhoto(null);
+      setPhotoUploadMode(null);
       setBeforePhotoFile(null);
       setBeforePhotoPreview(null);
       setAfterPhotoFile(null);
       setAfterPhotoPreview(null);
       fetchJobs(false);
     } catch (err: any) {
-      alert('Gagal menyelesaikan tugas: ' + (err?.response?.data?.message || err.message));
+      alert('Gagal mengunggah foto: ' + (err?.response?.data?.message || err.message));
     } finally {
       setUploadingPhoto(false);
     }
@@ -537,20 +571,6 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                 className="w-full h-full object-cover"
               />
             </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <h2 className="font-extrabold text-sm text-[#000f22] dark:text-white leading-tight">{technician?.name || 'Teknisi'}</h2>
-                <span className="bg-[#ffdf9e]/30 text-[#6c5000] dark:text-[#ffdf9e] text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md leading-none">Teknisi</span>
-              </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <div className="flex items-center gap-0.5 text-[#fdc003]">
-                  <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                  <span className="text-[9px] font-black text-[#43474d] dark:text-slate-350">{Number(technician?.rating || 5.0).toFixed(1)}</span>
-                </div>
-                <span className="text-gray-300 dark:text-gray-700 text-[9px]">•</span>
-                <span className="text-[9px] text-gray-500 dark:text-slate-400 font-bold">{technician?.total_orders || 0} Selesai</span>
-              </div>
-            </div>
           </div>
 
           <div className="text-[#0a2540] dark:text-white font-black italic tracking-tighter text-base">
@@ -590,6 +610,30 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
       <main className="flex-grow max-w-md mx-auto w-full p-4 space-y-4">
         {activeTab === 'tugas' && (
           <div className="space-y-4">
+            {/* Quick Profile Summary Card */}
+            <div className="bg-white dark:bg-[#111827] rounded-[2rem] p-4 border border-[#efedf0] dark:border-gray-800/40 shadow-sm flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-[#ffdf9e] shadow-sm">
+                <img 
+                  src={technician?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
+                  alt={technician?.name} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <h2 className="font-extrabold text-sm text-[#000f22] dark:text-white leading-tight">
+                  {technician?.name || 'Teknisi'}
+                </h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-0.5 text-[#fdc003]">
+                    <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                    <span className="text-[10px] font-black text-[#43474d] dark:text-slate-350">{Number(technician?.rating || 5.0).toFixed(1)}</span>
+                  </div>
+                  <span className="text-gray-300 dark:text-gray-700 text-[10px]">•</span>
+                  <span className="text-[10px] text-gray-500 dark:text-slate-400 font-bold">{technician?.total_orders || 0} Selesai</span>
+                </div>
+              </div>
+            </div>
+
             <h3 className="font-extrabold text-xs text-[#0a2540] dark:text-white uppercase tracking-wider mb-2">Tugas Aktif Anda</h3>
             {loading && (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -903,72 +947,76 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
               </div>
 
               <h4 className="font-extrabold text-base text-[#000f22] dark:text-white">
-                Unggah Bukti Hasil Kerja
+                {photoUploadMode === 'before' ? 'Unggah Foto Sebelum Pengerjaan' : 'Unggah Foto Sesudah Pengerjaan'}
               </h4>
               <p className="text-xs text-gray-500 dark:text-slate-400 leading-normal">
-                Silakan pilih/ambil foto kondisi kendaraan **Sebelum** dan **Sesudah** dilakukan pengerjaan.
+                {photoUploadMode === 'before' 
+                  ? 'Silakan ambil atau pilih foto kondisi kendaraan SEBELUM dilakukan pengerjaan.' 
+                  : 'Silakan ambil atau pilih foto kondisi kendaraan SESUDAH selesai dilakukan pengerjaan.'}
               </p>
 
-              <div className="grid grid-cols-2 gap-4">
-                {/* Before Photo */}
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black uppercase text-gray-450 dark:text-slate-500">Foto Sebelum</p>
-                  {beforePhotoPreview ? (
-                    <div className="relative rounded-2xl overflow-hidden shadow-inner border dark:border-gray-800 h-28">
-                      <img src={beforePhotoPreview} alt="Sebelum" className="w-full h-full object-cover" />
-                      <button 
-                        onClick={() => {
-                          setBeforePhotoFile(null);
-                          setBeforePhotoPreview(null);
-                        }}
-                        className="absolute top-1 right-1 bg-red-100 hover:bg-red-200 text-red-650 w-6 h-6 rounded-full flex items-center justify-center shadow-md cursor-pointer border-none"
-                      >
-                        <span className="material-symbols-outlined text-xs">close</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-gray-400 rounded-2xl p-4 cursor-pointer h-28 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-all">
-                      <span className="material-symbols-outlined text-xl text-gray-400 mb-1">add_a_photo</span>
-                      <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider text-center">Foto Sebelum</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handlePhotoSelectBefore} 
-                        className="hidden" 
-                      />
-                    </label>
-                  )}
-                </div>
-
-                {/* After Photo */}
-                <div className="space-y-2">
-                  <p className="text-[10px] font-black uppercase text-gray-450 dark:text-slate-500">Foto Sesudah</p>
-                  {afterPhotoPreview ? (
-                    <div className="relative rounded-2xl overflow-hidden shadow-inner border dark:border-gray-800 h-28">
-                      <img src={afterPhotoPreview} alt="Sesudah" className="w-full h-full object-cover" />
-                      <button 
-                        onClick={() => {
-                          setAfterPhotoFile(null);
-                          setAfterPhotoPreview(null);
-                        }}
-                        className="absolute top-1 right-1 bg-red-100 hover:bg-red-200 text-red-650 w-6 h-6 rounded-full flex items-center justify-center shadow-md cursor-pointer border-none"
-                      >
-                        <span className="material-symbols-outlined text-xs">close</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-gray-400 rounded-2xl p-4 cursor-pointer h-28 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-all">
-                      <span className="material-symbols-outlined text-xl text-gray-400 mb-1">add_a_photo</span>
-                      <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider text-center">Foto Sesudah</span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handlePhotoSelectAfter} 
-                        className="hidden" 
-                      />
-                    </label>
-                  )}
-                </div>
+              <div className="flex justify-center">
+                {photoUploadMode === 'before' ? (
+                  /* Before Photo */
+                  <div className="space-y-2 w-full max-w-[200px]">
+                    <p className="text-[10px] font-black uppercase text-gray-450 dark:text-slate-500">Foto Sebelum</p>
+                    {beforePhotoPreview ? (
+                      <div className="relative rounded-2xl overflow-hidden shadow-inner border dark:border-gray-800 h-32">
+                        <img src={beforePhotoPreview} alt="Sebelum" className="w-full h-full object-cover" />
+                        <button 
+                          onClick={() => {
+                            setBeforePhotoFile(null);
+                            setBeforePhotoPreview(null);
+                          }}
+                          className="absolute top-1 right-1 bg-red-100 hover:bg-red-200 text-red-650 w-6 h-6 rounded-full flex items-center justify-center shadow-md cursor-pointer border-none"
+                        >
+                          <span className="material-symbols-outlined text-xs">close</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-gray-400 rounded-2xl p-4 cursor-pointer h-32 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-all">
+                        <span className="material-symbols-outlined text-xl text-gray-400 mb-1">add_a_photo</span>
+                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider text-center">Foto Sebelum</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handlePhotoSelectBefore} 
+                          className="hidden" 
+                        />
+                      </label>
+                    )}
+                  </div>
+                ) : (
+                  /* After Photo */
+                  <div className="space-y-2 w-full max-w-[200px]">
+                    <p className="text-[10px] font-black uppercase text-gray-450 dark:text-slate-500">Foto Sesudah</p>
+                    {afterPhotoPreview ? (
+                      <div className="relative rounded-2xl overflow-hidden shadow-inner border dark:border-gray-800 h-32">
+                        <img src={afterPhotoPreview} alt="Sesudah" className="w-full h-full object-cover" />
+                        <button 
+                          onClick={() => {
+                            setAfterPhotoFile(null);
+                            setAfterPhotoPreview(null);
+                          }}
+                          className="absolute top-1 right-1 bg-red-100 hover:bg-red-200 text-red-650 w-6 h-6 rounded-full flex items-center justify-center shadow-md cursor-pointer border-none"
+                        >
+                          <span className="material-symbols-outlined text-xs">close</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-gray-400 rounded-2xl p-4 cursor-pointer h-32 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-all">
+                        <span className="material-symbols-outlined text-xl text-gray-400 mb-1">add_a_photo</span>
+                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-wider text-center">Foto Sesudah</span>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={handlePhotoSelectAfter} 
+                          className="hidden" 
+                        />
+                      </label>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Footer Buttons */}
@@ -977,6 +1025,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                   disabled={uploadingPhoto}
                   onClick={() => {
                     setSelectedBookingForPhoto(null);
+                    setPhotoUploadMode(null);
                     setBeforePhotoFile(null);
                     setBeforePhotoPreview(null);
                     setAfterPhotoFile(null);
@@ -987,7 +1036,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                   Batal
                 </button>
                 <button 
-                  disabled={!beforePhotoFile || !afterPhotoFile || uploadingPhoto}
+                  disabled={uploadingPhoto || (photoUploadMode === 'before' ? !beforePhotoFile : !afterPhotoFile)}
                   onClick={handleUploadPhotoAndSubmit}
                   className="flex-grow py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs cursor-pointer border-none disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
@@ -996,7 +1045,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                   ) : (
                     <>
                       <span className="material-symbols-outlined text-sm">upload</span>
-                      <span>Selesaikan Tugas</span>
+                      <span>{photoUploadMode === 'before' ? 'Mulai Pengerjaan' : 'Selesaikan Tugas'}</span>
                     </>
                   )}
                 </button>

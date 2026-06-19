@@ -883,16 +883,18 @@ export default function App() {
     }
   }, [currentScreen, isLoggedIn, userRole]);
 
-  // Global background polling for real-time bookings & notifications & promos
+  // Global background polling for real-time bookings & notifications & promos & packages
   useEffect(() => {
     if (!isLoggedIn || userRole !== 'customer') return;
 
     fetchBookings(); // Fetch immediately
     fetchDbPromos();
+    fetchDbPackages();
 
     const interval = setInterval(() => {
       fetchBookings();
       fetchDbPromos();
+      fetchDbPackages();
     }, 4000); // Poll every 4 seconds globally
 
     return () => clearInterval(interval);
@@ -1163,7 +1165,7 @@ export default function App() {
             <TrackingView 
               onBackToHome={() => navigateTo('dashboard')}
               userAvatar={user?.profile_photo}
-              trackedTransaction={transactions.find(t => t.id === activeTrackedOrderId) || transactions.find(t => t.status === 'Dipesan')}
+              trackedTransaction={transactions.find(t => t.id === activeTrackedOrderId) || transactions.find(t => t.status === 'Dipesan' || t.status === 'Diproses')}
               onCancelActiveOrder={handleCancelActiveOrder}
             />
           </motion.div>
@@ -1219,6 +1221,14 @@ export default function App() {
               onCtaAction={(notif) => {
                 if (notif.id.startsWith('notif-confirmed-')) {
                   const bookingId = notif.id.replace('notif-confirmed-', '');
+                  setActiveTrackedOrderId(bookingId);
+                  navigateTo('tracking');
+                } else if (notif.id.startsWith('notif-onway-')) {
+                  const bookingId = notif.id.replace('notif-onway-', '');
+                  setActiveTrackedOrderId(bookingId);
+                  navigateTo('tracking');
+                } else if (notif.id.startsWith('notif-inprogress-')) {
+                  const bookingId = notif.id.replace('notif-inprogress-', '');
                   setActiveTrackedOrderId(bookingId);
                   navigateTo('tracking');
                 } else if (notif.id.startsWith('notif-completed-') || notif.id.startsWith('notif-receipt-')) {

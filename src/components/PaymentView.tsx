@@ -115,6 +115,18 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  const normalizePhone = (phone: string) => {
+    let clean = phone.replace(/[^0-9+]/g, '');
+    if (clean.startsWith('+62')) {
+      clean = '0' + clean.slice(3);
+    } else if (clean.startsWith('62')) {
+      clean = '0' + clean.slice(2);
+    } else if (!clean.startsWith('0') && clean.length > 0) {
+      clean = '0' + clean;
+    }
+    return clean;
+  };
+
   // Step 1: Check User, Check Balance, Generate QR
   const handleProceedToQR = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,11 +139,12 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
     setErrorMsg(null);
 
     try {
+      const cleanPhone = normalizePhone(phoneInput);
       // 1. Check if user exists on OnoPay
       let checkUserRes = await fetch('http://onopay.web.id/api/v1/merchant/check-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ phone_number: phoneInput.trim() })
+        body: JSON.stringify({ phone_number: cleanPhone })
       });
 
       let checkUserData = await checkUserRes.json();
@@ -143,13 +156,13 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
       ) {
         try {
           // Call our backend to register this phone number on OnoPay
-          const regRes = await api.post('/profile/register-onopay', { phone: phoneInput.trim() });
+          const regRes = await api.post('/profile/register-onopay', { phone: cleanPhone });
           if (regRes.data.success) {
             // Re-check user after successful auto-registration
             checkUserRes = await fetch('http://onopay.web.id/api/v1/merchant/check-user', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({ phone_number: phoneInput.trim() })
+              body: JSON.stringify({ phone_number: cleanPhone })
             });
             checkUserData = await checkUserRes.json();
           } else {
@@ -168,7 +181,7 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
       const checkBalRes = await fetch('http://onopay.web.id/api/v1/merchant/check-balance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ phone_number: phoneInput.trim() })
+        body: JSON.stringify({ phone_number: cleanPhone })
       });
 
       const checkBalData = await checkBalRes.json();
