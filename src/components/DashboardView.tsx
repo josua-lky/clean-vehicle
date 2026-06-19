@@ -60,7 +60,7 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
     try {
       const cleanPhone = normalizePhone(userPhone);
       // 1. Check if user exists on OnoPay
-      const checkUserRes = await fetch('http://onopay.web.id/api/v1/merchant/check-user', {
+      const checkUserRes = await fetch('https://onopay.web.id/api/v1/merchant/check-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ phone_number: cleanPhone })
@@ -77,7 +77,7 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
       setOnoUserExists(true);
 
       // 2. Fetch balance
-      const checkBalRes = await fetch('http://onopay.web.id/api/v1/merchant/check-balance', {
+      const checkBalRes = await fetch('https://onopay.web.id/api/v1/merchant/check-balance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ phone_number: cleanPhone })
@@ -121,7 +121,7 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
     setTopUpLoading(true);
     try {
       const cleanPhone = normalizePhone(userPhone);
-      const topupRes = await fetch('http://onopay.web.id/api/v1/payment/topup', {
+      const topupRes = await fetch('https://onopay.web.id/api/v1/payment/topup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ phone_number: cleanPhone, amount })

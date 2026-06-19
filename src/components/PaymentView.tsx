@@ -141,7 +141,7 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
     try {
       const cleanPhone = normalizePhone(phoneInput);
       // 1. Check if user exists on OnoPay
-      let checkUserRes = await fetch('http://onopay.web.id/api/v1/merchant/check-user', {
+      let checkUserRes = await fetch('https://onopay.web.id/api/v1/merchant/check-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ phone_number: cleanPhone })
@@ -159,7 +159,7 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
           const regRes = await api.post('/profile/register-onopay', { phone: cleanPhone });
           if (regRes.data.success) {
             // Re-check user after successful auto-registration
-            checkUserRes = await fetch('http://onopay.web.id/api/v1/merchant/check-user', {
+            checkUserRes = await fetch('https://onopay.web.id/api/v1/merchant/check-user', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
               body: JSON.stringify({ phone_number: cleanPhone })
@@ -174,11 +174,11 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
       }
 
       if (!checkUserRes.ok || !checkUserData.success) {
-        throw new Error(checkUserData.message || 'Nomor telepon tidak terdaftar di OnoPay. Silakan daftar di http://onopay.web.id/user/register');
+        throw new Error(checkUserData.message || 'Nomor telepon tidak terdaftar di OnoPay. Silakan daftar di https://onopay.web.id/user/register');
       }
 
       // 2. Check balance
-      const checkBalRes = await fetch('http://onopay.web.id/api/v1/merchant/check-balance', {
+      const checkBalRes = await fetch('https://onopay.web.id/api/v1/merchant/check-balance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ phone_number: cleanPhone })
@@ -197,11 +197,11 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
       });
 
       if (balance < totalBill) {
-        throw new Error(`Saldo OnoPay Anda tidak cukup untuk membayar tagihan ini. Sisa Saldo: Rp ${balance.toLocaleString('id-ID')}. Silakan lakukan Top Up di http://onopay.web.id/`);
+        throw new Error(`Saldo OnoPay Anda tidak cukup untuk membayar tagihan ini. Sisa Saldo: Rp ${balance.toLocaleString('id-ID')}. Silakan lakukan Top Up di https://onopay.web.id/`);
       }
 
       // 3. Generate QR Code
-      const genQrRes = await fetch('http://onopay.web.id/api/v1/payment/qr/generate', {
+      const genQrRes = await fetch('https://onopay.web.id/api/v1/payment/qr/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
@@ -236,7 +236,7 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
     setErrorMsg(null);
 
     try {
-      const payRes = await fetch('http://onopay.web.id/api/v1/payment/qr/pay', {
+      const payRes = await fetch('https://onopay.web.id/api/v1/payment/qr/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
