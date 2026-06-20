@@ -9,7 +9,8 @@ const getStorageUrl = (path?: string) => {
   
   let relativePath = path;
   if (path.startsWith('http://') || path.startsWith('https://')) {
-    const parts = path.split('/storage/');
+    const isStorageFile = path.includes('/storage-file/');
+    const parts = path.split(isStorageFile ? '/storage-file/' : '/storage/');
     if (parts.length > 1) {
       relativePath = parts[1];
     } else {
@@ -18,7 +19,7 @@ const getStorageUrl = (path?: string) => {
   }
   
   const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, '') : 'http://127.0.0.1:8000';
-  return `${baseUrl}/storage/${relativePath}`;
+  return `${baseUrl}/storage-file/${relativePath}`;
 };
 
 interface TrackingViewProps {

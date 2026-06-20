@@ -301,7 +301,8 @@ export default function App() {
     
     let relativePath = path;
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      const parts = path.split('/storage/');
+      const isStorageFile = path.includes('/storage-file/');
+      const parts = path.split(isStorageFile ? '/storage-file/' : '/storage/');
       if (parts.length > 1) {
         relativePath = parts[1];
       } else {
@@ -310,7 +311,7 @@ export default function App() {
     }
     
     const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, '') : 'http://127.0.0.1:8000';
-    return `${baseUrl}/storage/${relativePath}`;
+    return `${baseUrl}/storage-file/${relativePath}`;
   };
 
   const getAvatarUrl = () => {
