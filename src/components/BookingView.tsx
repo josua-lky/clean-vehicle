@@ -342,9 +342,14 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
       return;
     }
 
+    const chosenTech = mappedTechs.find(t => t.id === selectedTech);
+    if (chosenTech && isTechBusyAtSelectedTime(chosenTech.rawBookings)) {
+      setValidationError(`Teknisi ${chosenTech.name} sudah memiliki jadwal booking di jam tersebut. Silakan pilih teknisi lain atau ubah jam cuci.`);
+      return;
+    }
+
     setValidationError(null);
     const chosenOutlet = mappedOutlets.find(o => o.id === selectedOutletId);
-    const chosenTech = mappedTechs.find(t => t.id === selectedTech);
     const resolvedOutletId = isTempat ? selectedOutletId : (chosenTech?.outletId || null);
 
     onUpdateBooking({
