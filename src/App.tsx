@@ -2,7 +2,6 @@ import api from './services/api';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookingState, Transaction, Car, NotificationItem } from './types';
-import { NOTIFICATIONS } from './data';
 import WelcomeView from './components/WelcomeView';
 import LoginView from './components/LoginView';
 import RegisterView from './components/RegisterView';
@@ -459,19 +458,6 @@ export default function App() {
       };
 
       const derivedNotifs: NotificationItem[] = [];
-
-      // Filter static notifications from NOTIFICATIONS
-      const staticPromoAndInfo = NOTIFICATIONS.filter(n => {
-        if (n.category === 'promo') {
-          return notifSettings.promoOffers;
-        }
-        if (n.category === 'info') {
-          return notifSettings.promoOffers;
-        }
-        return n.category !== 'pesanan'; // exclude static dummy pesanan
-      });
-
-      derivedNotifs.push(...staticPromoAndInfo);
 
       // Append dynamic promo notifications
       const savedPromoNotifs = localStorage.getItem('promoNotifications');
