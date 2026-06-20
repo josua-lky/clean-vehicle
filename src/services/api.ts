@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+const getBaseURL = () => {
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://127.0.0.1:8000/api';
+  }
+  return 'https://vclean.web.id/api';
+};
+
 const api = axios.create({
-  baseURL: 'https://vclean.web.id/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
