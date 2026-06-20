@@ -117,6 +117,35 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
     });
   };
 
+  const handleAlertClick = (alertItem: any) => {
+    // Mark alert as read
+    const updated = alerts.map(a => a.id === alertItem.id ? { ...a, read: true } : a);
+    setAlerts(updated);
+    localStorage.setItem(`tech_alerts_${technician?.id || 'default'}`, JSON.stringify(updated));
+
+    // Find the booking
+    const bookingId = alertItem.id.split('-').pop(); // e.g. "5" from "VW-NEW-5"
+    const job = bookings.find(b => String(b.id) === String(bookingId) || b.booking_code === alertItem.bookingCode);
+    if (job) {
+      if (['completed', 'cancelled'].includes(job.status)) {
+        setActiveTab('riwayat');
+      } else {
+        setActiveTab('tugas');
+      }
+      // Scroll to the card after a short timeout to let the tab render
+      setTimeout(() => {
+        const el = document.getElementById(`job-card-${job.id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-[#fdc003]', 'scale-[1.01]');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-[#fdc003]', 'scale-[1.01]');
+          }, 2000);
+        }
+      }, 300);
+    }
+  };
+
   const fetchJobs = async (showLoader = true) => {
     try {
       if (showLoader) setLoading(true);
@@ -395,6 +424,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
     return (
       <div 
         key={job.id} 
+        id={`job-card-${job.id}`}
         className="bg-white dark:bg-[#111827] rounded-[2rem] p-5 shadow-md border border-[#efedf0] dark:border-gray-800/40 space-y-4 relative overflow-hidden transition-transform duration-205"
       >
         {/* Top Badge Row */}
@@ -496,6 +526,14 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
             <div className="p-3 bg-slate-50 dark:bg-[#151f32]/40 rounded-xl text-[11px] font-semibold text-gray-600 dark:text-slate-400">
               <p className="text-[9px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Catatan Customer</p>
               "{job.notes}"
+            </div>
+          )}
+
+          {/* Cancellation Reason (if cancelled) */}
+          {job.status === 'cancelled' && (
+            <div className="p-3 bg-red-50 dark:bg-red-955/20 border border-red-100 dark:border-red-950/30 rounded-xl text-[11px] font-semibold text-red-650 dark:text-red-400">
+              <p className="text-[9px] font-black uppercase tracking-wider text-red-450 mb-0.5">Alasan Pembatalan</p>
+              "{job.cancelled_reason || 'Tidak ada alasan khusus yang diisi.'}"
             </div>
           )}
         </div>
@@ -765,7 +803,8 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                 {alerts.map((item) => (
                   <div 
                     key={item.id}
-                    className={`p-4 rounded-2xl border transition-all flex gap-3 relative ${
+                    onClick={() => handleAlertClick(item)}
+                    className={`p-4 rounded-2xl border transition-all flex gap-3 relative cursor-pointer hover:bg-slate-55/40 dark:hover:bg-slate-900/30 ${
                       item.read 
                         ? 'bg-white dark:bg-[#111827] border-slate-105 dark:border-gray-800/40 opacity-75' 
                         : 'bg-[#ffdf9e]/10 dark:bg-amber-950/20 border-[#ffdf9e]/30 dark:border-amber-900/40'

@@ -56,7 +56,8 @@ export default function AlertsView({ onNavigate, onCtaAction, notifications }: A
             filteredNotifs.map(notif => (
               <div 
                 key={notif.id}
-                className="bg-white rounded-xl p-4 border border-[#efedf0] shadow-sm relative overflow-hidden flex gap-4 transition-transform duration-300 active:scale-[0.99]"
+                onClick={() => onCtaAction && onCtaAction(notif)}
+                className="bg-white rounded-xl p-4 border border-[#efedf0] shadow-sm relative overflow-hidden flex gap-4 transition-transform duration-300 active:scale-[0.99] cursor-pointer hover:bg-slate-50/50"
               >
                 {/* Decorative category stripe */}
                 <div className={`absolute top-0 left-0 w-1.5 h-full ${

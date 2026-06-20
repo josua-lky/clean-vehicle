@@ -48,6 +48,12 @@ export interface Transaction {
   serviceType?: 'home' | 'outlet';
   beforePhoto?: string;
   afterPhoto?: string;
+  cancelledReason?: string;
+  payment?: {
+    status: string;
+    refundAmount: number;
+    refundedAt?: string;
+  } | null;
   technician?: {
     id: string;
     name: string;

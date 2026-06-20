@@ -283,10 +283,25 @@ export default function App() {
   ) => {
     localStorage.setItem('currentScreen', screen);
     setCurrentScreen(screen);
+    if (screen !== 'history') {
+      setInitialExpandedBookingId(undefined);
+    }
   };
 
   // Authenticated state
   const [user, setUser] = useState<any>(null);
+  const getAvatarUrl = () => {
+    if (!user) return 'https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17';
+    if (user.avatar) return user.avatar;
+    if (user.profile_photo) {
+      if (user.profile_photo.startsWith('http://') || user.profile_photo.startsWith('https://') || user.profile_photo.startsWith('data:image/')) {
+        return user.profile_photo;
+      }
+      return `http://127.0.0.1:8000/storage/${user.profile_photo}`;
+    }
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=1B2337&color=F0C419`;
+  };
+  const avatarUrl = getAvatarUrl();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [userRole, setUserRole] = useState<'customer' | 'technician'>(() => {
@@ -305,6 +320,7 @@ export default function App() {
   = useState<Car[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeTrackedOrderId, setActiveTrackedOrderId] = useState<string | null>(null);
+  const [initialExpandedBookingId, setInitialExpandedBookingId] = useState<string | undefined>(undefined);
   const [hasReviewedPendingToday, setHasReviewedPendingToday] = useState<boolean>(() => {
     return localStorage.getItem('hasReviewedPendingToday') === 'true';
   });
@@ -394,6 +410,12 @@ export default function App() {
         afterPhoto: b.after_photo || undefined,
         rating: b.review ? Number(b.review.rating) : undefined,
         reviewText: b.review ? b.review.comment : undefined,
+        cancelledReason: b.cancelled_reason || '',
+        payment: b.payment ? {
+          status: b.payment.status,
+          refundAmount: Number(b.payment.refund_amount || 0),
+          refundedAt: b.payment.refunded_at
+        } : null,
         technician: b.technician ? {
           id: String(b.technician.id),
           name: b.technician.name,
@@ -532,6 +554,19 @@ export default function App() {
                 }
               });
             }
+          }
+
+          if (b.payment && b.payment.status === 'refunded') {
+            derivedNotifs.push({
+              id: `notif-refunded-${b.id}`,
+              category: 'pesanan',
+              title: 'Dana Refund Dikembalikan',
+              time: formatNotifTime(b.payment.refunded_at || b.payment.updated_at),
+              description: `Dana refund sebesar Rp ${Number(b.payment.refund_amount || b.payment.amount).toLocaleString('id-ID')} untuk pemesanan ${b.booking_code} telah dikembalikan oleh admin ke saldo e-wallet OnoPay Anda.`,
+              idTag: b.booking_code,
+              hasCta: true,
+              ctaText: 'DETAIL PESANAN'
+            });
           }
         });
       }
@@ -830,14 +865,14 @@ export default function App() {
     }
   };
 
-  const handleCancelActiveOrder = async (id?: string) => {
+  const handleCancelActiveOrder = async (id?: string, reason?: string) => {
     const targetId = id || transactions.find(t => t.status === 'Dipesan' || t.status === 'Diproses')?.id;
     if (!targetId) return;
 
     try {
       console.log('Cancelling booking ID:', targetId);
       await api.put(`/bookings/${targetId}/cancel`, {
-        reason: 'Dibatalkan oleh pengguna dari layar lacak pesanan.'
+        reason: reason || 'Dibatalkan oleh pengguna dari layar lacak pesanan.'
       });
       await fetchBookings();
     } catch (err: any) {
@@ -1003,7 +1038,7 @@ export default function App() {
               darkMode={darkMode}
               onToggleTheme={handleToggleTheme}
               userName={user?.name || 'Alexander Sterling'}
-              userAvatar={user?.profile_photo || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17'}
+              userAvatar={avatarUrl}
               userPhone={user?.phone}
               booking={booking}
               onUpdateBooking={handleUpdateBooking}
@@ -1057,7 +1092,7 @@ export default function App() {
               onUpdateBooking={handleUpdateBooking}
               onNext={() => navigateTo('details')}
               onBack={() => navigateTo('dashboard')}
-              userAvatar={user?.profile_photo}
+              userAvatar={avatarUrl}
               outlets={dbOutlets}
               technicians={dbTechnicians}
               onSaveLocation={handleSaveLocation}
@@ -1080,7 +1115,7 @@ export default function App() {
               onUpdateBooking={handleUpdateBooking}
               onNext={() => navigateTo('confirm')}
               onBack={() => navigateTo(viewOnlyPackages ? 'dashboard' : 'booking')}
-              userAvatar={user?.profile_photo}
+              userAvatar={avatarUrl}
               packages={dbPackages}
               viewOnly={viewOnlyPackages}
             />
@@ -1101,7 +1136,7 @@ export default function App() {
               onUpdateBooking={handleUpdateBooking}
               onNext={() => navigateTo('payment')}
               onBack={() => navigateTo('details')}
-              userAvatar={user?.profile_photo}
+              userAvatar={avatarUrl}
               technicians={dbTechnicians}
               packages={dbPackages}
               onSaveLocation={handleSaveLocation}
@@ -1125,7 +1160,7 @@ export default function App() {
               booking={booking}
               onPaymentSuccess={handlePaymentSuccess}
               onBack={() => navigateTo('confirm')}
-              userAvatar={user?.profile_photo}
+              userAvatar={avatarUrl}
               userPhone={user?.phone}
               packages={dbPackages}
               promos={dbPromos}
@@ -1164,7 +1199,7 @@ export default function App() {
           >
             <TrackingView 
               onBackToHome={() => navigateTo('dashboard')}
-              userAvatar={user?.profile_photo}
+              userAvatar={avatarUrl}
               trackedTransaction={transactions.find(t => t.id === activeTrackedOrderId) || transactions.find(t => t.status === 'Dipesan' || t.status === 'Diproses')}
               onCancelActiveOrder={handleCancelActiveOrder}
             />
@@ -1190,13 +1225,14 @@ export default function App() {
                 else if (tab === 'alerts') navigateTo('alerts');
                 else if (tab === 'profile') navigateTo('profile');
               }}
-              userAvatar={user?.profile_photo}
+              userAvatar={avatarUrl}
               onTrackActiveOrder={(orderId) => {
                 setActiveTrackedOrderId(orderId);
                 navigateTo('tracking');
               }}
               hasReviewedPendingToday={hasReviewedPendingToday}
               unreadCount={unreadCount}
+              initialExpandedId={initialExpandedBookingId}
             />
           </motion.div>
         )}
@@ -1231,7 +1267,12 @@ export default function App() {
                   const bookingId = notif.id.replace('notif-inprogress-', '');
                   setActiveTrackedOrderId(bookingId);
                   navigateTo('tracking');
-                } else if (notif.id.startsWith('notif-completed-') || notif.id.startsWith('notif-receipt-')) {
+                } else if (notif.id.startsWith('notif-completed-') || notif.id.startsWith('notif-receipt-') || notif.id.startsWith('notif-refunded-')) {
+                  let bookingId = '';
+                  if (notif.id.startsWith('notif-completed-')) bookingId = notif.id.replace('notif-completed-', '');
+                  else if (notif.id.startsWith('notif-receipt-')) bookingId = notif.id.replace('notif-receipt-', '');
+                  else if (notif.id.startsWith('notif-refunded-')) bookingId = notif.id.replace('notif-refunded-', '');
+                  setInitialExpandedBookingId(bookingId);
                   navigateTo('history');
                 } else {
                   navigateTo('booking');
@@ -1254,7 +1295,7 @@ export default function App() {
               darkMode={darkMode}
               onToggleTheme={handleToggleTheme}
               userName={user?.name}
-              userAvatar={user?.profile_photo || 'https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17'}
+              userAvatar={avatarUrl}
               userEmail={user?.email}
               onUpdateProfile={handleUpdateProfile}
               vehicles={vehicles}

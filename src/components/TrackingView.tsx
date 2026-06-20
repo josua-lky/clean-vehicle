@@ -7,13 +7,14 @@ interface TrackingViewProps {
   onBackToHome: () => void;
   userAvatar?: string;
   trackedTransaction?: Transaction;
-  onCancelActiveOrder?: (id?: string) => void;
+  onCancelActiveOrder?: (id?: string, reason?: string) => void;
 }
 
 export default function TrackingView({ onBackToHome, userAvatar, trackedTransaction, onCancelActiveOrder }: TrackingViewProps) {
   const [showCallAlert, setShowCallAlert] = useState(false);
   const [showChatBox, setShowChatBox] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const [showCancelSuccessToast, setShowCancelSuccessToast] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   
@@ -673,7 +674,20 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
                 <span className="material-symbols-outlined text-3xl">warning</span>
               </div>
               <h4 className="font-extrabold text-base text-[#000f22] dark:text-white mb-1">Batalkan Pesanan?</h4>
-              <p className="text-xs text-[#74777e] dark:text-slate-400 mb-5 leading-normal font-medium">Apakah Anda yakin ingin membatalkan pesanan cuci ini? Seluruh biaya yang dibayarkan akan dikembalikan secara instan ke Dompet Garasi.</p>
+              <p className="text-[11px] text-[#74777e] dark:text-slate-400 mb-3 leading-normal font-medium">Apakah Anda yakin ingin membatalkan pesanan cuci ini? Seluruh biaya yang dibayarkan akan dikembalikan ke OnoPay Anda.</p>
+              
+              <div className="flex flex-col text-left gap-1 mb-4">
+                <label className="text-[9px] font-extrabold text-[#74777e] dark:text-slate-400 uppercase tracking-wider">Alasan Pembatalan</label>
+                <textarea 
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Tulis alasan Anda di sini..."
+                  rows={2}
+                  className="w-full bg-[#f5f3f6] dark:bg-[#1a2333] border border-[#e3e2e5] dark:border-gray-800 rounded-xl p-2.5 text-xs font-semibold focus:ring-1 focus:ring-[#fdc003] outline-none text-[#1b1c1e] dark:text-white placeholder-[#74777e] resize-none"
+                  required
+                />
+              </div>
+
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowCancelModal(false)}
@@ -683,9 +697,13 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
                 </button>
                 <button 
                   onClick={() => {
+                    if (!cancelReason.trim()) {
+                      alert('Harap isi alasan pembatalan');
+                      return;
+                    }
                     setShowCancelModal(false);
                     if (onCancelActiveOrder) {
-                      onCancelActiveOrder(trackedTransaction?.id);
+                      onCancelActiveOrder(trackedTransaction?.id, cancelReason);
                     }
                     setShowCancelSuccessToast(true);
                   }}

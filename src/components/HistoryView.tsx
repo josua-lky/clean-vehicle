@@ -11,14 +11,31 @@ interface HistoryViewProps {
   onTrackActiveOrder?: (orderId: string) => void;
   hasReviewedPendingToday?: boolean;
   unreadCount: number;
+  initialExpandedId?: string;
 }
 
-export default function HistoryView({ transactions, onSubmitReview, onRepeatOrder, onNavigate, userAvatar, onTrackActiveOrder, hasReviewedPendingToday, unreadCount }: HistoryViewProps) {
+export default function HistoryView({ transactions, onSubmitReview, onRepeatOrder, onNavigate, userAvatar, onTrackActiveOrder, hasReviewedPendingToday, unreadCount, initialExpandedId }: HistoryViewProps) {
   const [itemRatings, setItemRatings] = useState<Record<string, number>>({});
   const [itemComments, setItemComments] = useState<Record<string, string>>({});
   const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'Semua' | 'Selesai' | 'Dibatalkan'>('Semua');
   const [expandedTxIds, setExpandedTxIds] = useState<Record<string, boolean>>({});
+
+  React.useEffect(() => {
+    if (initialExpandedId) {
+      setExpandedTxIds(prev => ({ ...prev, [initialExpandedId]: true }));
+      setTimeout(() => {
+        const el = document.getElementById(`tx-card-${initialExpandedId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-[#fdc003]', 'scale-[1.01]');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-[#fdc003]', 'scale-[1.01]');
+          }, 2000);
+        }
+      }, 300);
+    }
+  }, [initialExpandedId]);
 
   const toggleTxExpand = (id: string) => {
     setExpandedTxIds(prev => ({
@@ -168,7 +185,7 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
                 .map(item => {
                   const isExpanded = !!expandedTxIds[item.id];
                   return (
-                    <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-[#efedf0] transition-all">
+                    <div key={item.id} id={`tx-card-${item.id}`} className="bg-white p-4 rounded-xl shadow-sm border border-[#efedf0] transition-all">
                       <div className="flex gap-4">
                         {/* Visual Category symbol */}
                         <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${
@@ -308,6 +325,24 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
                               {item.additionalNotes || 'Penyemprotan bodi merata dengan foam berbusa tebal pH seimbang, pengeringan halus vacuum, plus pelat pelindung kilat.'}
                             </p>
                           </div>
+
+                          {item.status === 'Dibatalkan' && (
+                            <div className="bg-red-50 p-2.5 rounded-xl border border-red-100 mt-1">
+                              <span className="text-[9px] text-red-650 block font-bold uppercase tracking-wider mb-0.5">Alasan Pembatalan</span>
+                              <p className="text-red-700 font-semibold leading-relaxed text-[10px]">
+                                {item.cancelledReason || 'Tidak ada alasan khusus yang diisi.'}
+                              </p>
+                            </div>
+                          )}
+
+                          {item.payment && item.payment.status === 'refunded' && (
+                            <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 mt-1">
+                              <span className="text-[9px] text-emerald-750 block font-bold uppercase tracking-wider mb-0.5">Pengembalian Dana (Refund)</span>
+                              <p className="text-emerald-800 font-semibold leading-relaxed text-[10px]">
+                                Dana sebesar <strong className="font-extrabold text-emerald-900">Rp {item.payment.refundAmount.toLocaleString('id-ID')}</strong> telah berhasil dikembalikan ke saldo e-wallet OnoPay Anda{item.payment.refundedAt ? ` pada ${new Date(item.payment.refundedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} pukul ${new Date(item.payment.refundedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}` : ''}.
+                              </p>
+                            </div>
+                          )}
 
                           {(item.beforePhoto || item.afterPhoto) && (
                             <div className="bg-amber-50/40 dark:bg-amber-955/10 p-3 rounded-2xl border border-amber-100/40 dark:border-amber-950/20 space-y-2 mt-1">
