@@ -4,19 +4,38 @@ import { BookingState, Car } from '../types';
 import api from '../services/api';
 import LocationModal from './LocationModal';
 
+const getStorageUrl = (path?: string) => {
+  if (!path) return '';
+  if (path.startsWith('data:image/')) return path;
+  
+  let relativePath = path;
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    const parts = path.split('/storage/');
+    if (parts.length > 1) {
+      relativePath = parts[1];
+    } else {
+      return path;
+    }
+  }
+  
+  const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, '') : 'http://127.0.0.1:8000';
+  return `${baseUrl}/storage/${relativePath}`;
+};
+
 interface BookingViewProps {
   booking: BookingState;
   onUpdateBooking: (updated: Partial<BookingState>) => void;
   onNext: () => void;
   onBack: () => void;
   userAvatar?: string;
+  userName?: string;
   outlets: any[];
   technicians: any[];
   onSaveLocation: (locationName: string, pickupLocation: string, lat?: number, lon?: number) => void;
   cars: Car[];
 }
 
-export default function BookingView({ booking, onUpdateBooking, onNext, onBack, userAvatar, outlets, technicians, onSaveLocation, cars }: BookingViewProps) {
+export default function BookingView({ booking, onUpdateBooking, onNext, onBack, userAvatar, userName, outlets, technicians, onSaveLocation, cars }: BookingViewProps) {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [washType, setWashType] = useState<'rumah' | 'tempat'>(
     booking.pickupLocation.toLowerCase().includes('outlet') ? 'tempat' : 'rumah'
@@ -73,9 +92,7 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
       name: t.name,
       rating: Number(t.rating || 4.5),
       reviewsCount: t.total_orders || 120,
-      avatar: t.avatar || (t.profile_photo 
-        ? (t.profile_photo.startsWith('http') ? t.profile_photo : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://127.0.0.1:8000' : 'https://vclean.web.id') + '/storage/' + t.profile_photo)
-        : `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1B2337&color=F0C419`),
+      avatar: getStorageUrl(t.avatar || t.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1B2337&color=F0C419`,
       specialties: t.specialization ? [t.specialization === 'motor' ? 'Motor' : 'Mobil', t.area || 'All Rounder'] : ['Pembersihan', 'Detil Luar'],
       specialization: t.specialization,
       outletId: t.outlet_id ? String(t.outlet_id) : null,
@@ -363,7 +380,7 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
               className="w-full h-full object-cover"
               src={userAvatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17"} 
               onError={(e) => {
-                e.currentTarget.src = `https://ui-avatars.com/api/?name=User&background=1B2337&color=F0C419`;
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'User')}&background=1B2337&color=F0C419`;
               }}
             />
           </div>

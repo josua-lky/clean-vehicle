@@ -109,11 +109,12 @@ interface ServiceDetailsViewProps {
   onNext: () => void;
   onBack: () => void;
   userAvatar?: string;
+  userName?: string;
   packages: any[];
   viewOnly?: boolean;
 }
 
-export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, onBack, userAvatar, packages, viewOnly }: ServiceDetailsViewProps) {
+export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, onBack, userAvatar, userName, packages, viewOnly }: ServiceDetailsViewProps) {
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState<'mobil' | 'motor'>(
     booking.vehicleType || 'mobil'
   );
@@ -194,6 +195,9 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
               <img 
                 alt="User" 
                 src={userAvatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17"} 
+                onError={(e) => {
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'User')}&background=1B2337&color=F0C419`;
+                }}
               />
             </div>
           </div>

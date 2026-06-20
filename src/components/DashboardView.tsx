@@ -230,6 +230,9 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
               alt="User profile avatar" 
               className="w-full h-full object-cover" 
               src={userAvatar}
+              onError={(e) => {
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'User')}&background=1B2337&color=F0C419`;
+              }}
             />
           </div>
 

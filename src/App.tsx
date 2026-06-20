@@ -1112,6 +1112,7 @@ export default function App() {
               onNext={() => navigateTo('details')}
               onBack={() => navigateTo('dashboard')}
               userAvatar={avatarUrl}
+              userName={user?.name}
               outlets={dbOutlets}
               technicians={dbTechnicians}
               onSaveLocation={handleSaveLocation}
@@ -1135,6 +1136,7 @@ export default function App() {
               onNext={() => navigateTo('confirm')}
               onBack={() => navigateTo(viewOnlyPackages ? 'dashboard' : 'booking')}
               userAvatar={avatarUrl}
+              userName={user?.name}
               packages={dbPackages}
               viewOnly={viewOnlyPackages}
             />
@@ -1156,6 +1158,7 @@ export default function App() {
               onNext={() => navigateTo('payment')}
               onBack={() => navigateTo('details')}
               userAvatar={avatarUrl}
+              userName={user?.name}
               technicians={dbTechnicians}
               packages={dbPackages}
               onSaveLocation={handleSaveLocation}
@@ -1219,6 +1222,7 @@ export default function App() {
             <TrackingView 
               onBackToHome={() => navigateTo('dashboard')}
               userAvatar={avatarUrl}
+              userName={user?.name}
               trackedTransaction={transactions.find(t => t.id === activeTrackedOrderId) || transactions.find(t => t.status === 'Dipesan' || t.status === 'Diproses')}
               onCancelActiveOrder={handleCancelActiveOrder}
             />

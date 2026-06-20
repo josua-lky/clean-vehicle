@@ -1,7 +1,26 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { BookingState, Car } from '../types';
+import api from '../services/api';
 import LocationModal from './LocationModal';
+
+const getStorageUrl = (path?: string) => {
+  if (!path) return '';
+  if (path.startsWith('data:image/')) return path;
+  
+  let relativePath = path;
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    const parts = path.split('/storage/');
+    if (parts.length > 1) {
+      relativePath = parts[1];
+    } else {
+      return path;
+    }
+  }
+  
+  const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, '') : 'http://127.0.0.1:8000';
+  return `${baseUrl}/storage/${relativePath}`;
+};
 
 interface ConfirmOrderViewProps {
   booking: BookingState;
@@ -9,6 +28,7 @@ interface ConfirmOrderViewProps {
   onNext: () => void;
   onBack: () => void;
   userAvatar?: string;
+  userName?: string;
   technicians: any[];
   packages: any[];
   onSaveLocation: (locationName: string, pickupLocation: string, lat?: number, lon?: number) => void;
@@ -17,7 +37,7 @@ interface ConfirmOrderViewProps {
   transactions: any[];
 }
 
-export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onBack, userAvatar, technicians, packages, onSaveLocation, cars, promos = [], transactions = [] }: ConfirmOrderViewProps) {
+export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onBack, userAvatar, userName, technicians, packages, onSaveLocation, cars, promos = [], transactions = [] }: ConfirmOrderViewProps) {
   const [showLocationModal, setShowLocationModal] = useState(false);
 
   const targetType = booking.vehicleType === 'motor' ? 'roda_2' : 'roda_4';
@@ -39,9 +59,7 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
     name: t.name,
     rating: Number(t.rating || 4.5),
     reviewsCount: t.total_orders || 120,
-    avatar: t.avatar || (t.profile_photo 
-      ? (t.profile_photo.startsWith('http') ? t.profile_photo : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://127.0.0.1:8000' : 'https://vclean.web.id') + '/storage/' + t.profile_photo)
-      : `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1B2337&color=F0C419`)
+    avatar: getStorageUrl(t.avatar || t.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1B2337&color=F0C419`
   })).find(t => String(t.id) === String(booking.selectedTechnicianId))
   || { name: 'Kru Clean Vehicle', rating: 4.8, avatar: 'https://ui-avatars.com/api/?name=Clean+Vehicle' };
 
@@ -130,7 +148,7 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
               alt="User Headshot" 
               src={userAvatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17"}
               onError={(e) => {
-                e.currentTarget.src = `https://ui-avatars.com/api/?name=User&background=1B2337&color=F0C419`;
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'User')}&background=1B2337&color=F0C419`;
               }}
             />
           </div>
