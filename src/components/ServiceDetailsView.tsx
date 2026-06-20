@@ -191,15 +191,6 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
           </div>
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-[#0a2540] cursor-pointer">share</span>
-            <div className="w-8 h-8 rounded-full overflow-hidden border">
-              <img 
-                alt="User" 
-                src={userAvatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17"} 
-                onError={(e) => {
-                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'User')}&background=1B2337&color=F0C419`;
-                }}
-              />
-            </div>
           </div>
         </div>
       </header>
@@ -257,47 +248,7 @@ export default function ServiceDetailsView({ booking, onUpdateBooking, onNext, o
 
           {/* Service Location Card removed to keep page focused on package details */}
 
-          {/* Vehicle Type Filter Section */}
-          <section className="mb-6">
-            <h3 className="text-sm font-black text-[#74777e] uppercase tracking-wider mb-3 ml-1">Kategori Kendaraan</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <button 
-                type="button"
-                onClick={() => {
-                  setVehicleTypeFilter('mobil');
-                  onUpdateBooking({ vehicleType: 'mobil' });
-                }}
-                className={`flex items-center gap-4 p-4 rounded-2xl shadow-sm border transition-all cursor-pointer ${
-                  vehicleTypeFilter === 'mobil' 
-                    ? 'bg-white border-[#fdc003] ring-1 ring-[#fdc003]' 
-                    : 'bg-white border-transparent hover:bg-slate-50'
-                }`}
-              >
-                <div className="h-10 w-10 bg-[#ffdf9e]/30 rounded-full flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[#785900] text-2xl">directions_car</span>
-                </div>
-                <span className="font-extrabold text-sm text-[#000f22]">Mobil</span>
-              </button>
 
-              <button 
-                type="button"
-                onClick={() => {
-                  setVehicleTypeFilter('motor');
-                  onUpdateBooking({ vehicleType: 'motor' });
-                }}
-                className={`flex items-center gap-4 p-4 rounded-2xl shadow-sm border transition-all cursor-pointer ${
-                  vehicleTypeFilter === 'motor' 
-                    ? 'bg-white border-[#fdc003] ring-1 ring-[#fdc003]' 
-                    : 'bg-white border-transparent hover:bg-slate-50'
-                }`}
-              >
-                <div className="h-10 w-10 bg-[#ffdf9e]/30 rounded-full flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[#785900] text-2xl">motorcycle</span>
-                </div>
-                <span className="font-extrabold text-sm text-[#000f22]">Motor</span>
-              </button>
-            </div>
-          </section>
 
           {/* Package Selection Lists */}
           <section className="mb-6">

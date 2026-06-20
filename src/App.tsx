@@ -697,30 +697,19 @@ export default function App() {
 
   const handleUpdateProfile = (
     name: string,
-    profilePhoto: string
+    profilePhoto: string,
+    avatar?: string
   ) => {
-  
     setUser(prev => {
-  
       const updatedUser = {
-  
         ...prev,
-  
         name,
-  
-        profile_photo: profilePhoto
-  
+        profile_photo: profilePhoto,
+        avatar: avatar || (prev ? prev.avatar : undefined)
       };
-  
-      localStorage.setItem(
-        'user',
-        JSON.stringify(updatedUser)
-      );
-  
+      localStorage.setItem('user', JSON.stringify(updatedUser));
       return updatedUser;
-  
     });
-  
   };
 
   const handleAddVehicle = async (newVeh: Omit<Car, 'id'>) => {

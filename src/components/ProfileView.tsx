@@ -13,7 +13,7 @@ interface ProfileViewProps {
   userName: string;
   userAvatar: string;
   userEmail?: string;
-  onUpdateProfile: (name: string, avatar: string) => void;
+  onUpdateProfile: (name: string, profilePhoto: string, avatar?: string) => void;
   vehicles: Car[];
   onAddVehicle: (vehicle: Omit<Car, 'id'>) => void;
   onUpdateVehicle?: (id: string, updated: Partial<Car>) => void;
@@ -102,11 +102,9 @@ export default function ProfileView({
         );
   
       onUpdateProfile(
-  
         response.data.user.name,
-  
-        response.data.user.profile_photo
-  
+        response.data.user.profile_photo,
+        response.data.user.avatar
       );
   
       localStorage.setItem(
