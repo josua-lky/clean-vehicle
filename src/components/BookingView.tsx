@@ -362,6 +362,9 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
               alt="User" 
               className="w-full h-full object-cover"
               src={userAvatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17"} 
+              onError={(e) => {
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=User&background=1B2337&color=F0C419`;
+              }}
             />
           </div>
         </div>
@@ -582,6 +585,9 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
                         alt={tech.name} 
                         className="w-full h-full object-cover"
                         src={tech.avatar}
+                        onError={(e) => {
+                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(tech.name)}&background=1B2337&color=F0C419`;
+                        }}
                       />
                     </div>
                     <div className="flex-1 flex flex-col justify-between">

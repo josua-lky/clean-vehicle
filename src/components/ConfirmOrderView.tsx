@@ -129,6 +129,9 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
             <img 
               alt="User Headshot" 
               src={userAvatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17"}
+              onError={(e) => {
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=User&background=1B2337&color=F0C419`;
+              }}
             />
           </div>
         </div>
@@ -225,7 +228,14 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
         <section className="flex flex-col gap-1.5">
           <label className="text-[10px] font-bold text-[#43474d] uppercase tracking-wider ml-1">Kru / Teknisi</label>
           <div className="bg-white rounded-xl p-4 border border-[#efedf0] flex items-center gap-3 shadow-sm">
-            <img className="w-10 h-10 rounded-lg object-cover" src={selectedTech.avatar} alt="Tech" />
+            <img 
+              className="w-10 h-10 rounded-lg object-cover" 
+              src={selectedTech.avatar} 
+              alt="Tech" 
+              onError={(e) => {
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedTech.name)}&background=1B2337&color=F0C419`;
+              }}
+            />
             <div>
               <p className="text-xs font-bold text-[#000f22]">{selectedTech.name}</p>
               <p className="text-[10px] text-[#74777e]">{selectedTech.rating} Rating • Specialist</p>

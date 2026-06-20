@@ -681,6 +681,9 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                 src={getStorageUrl(technician?.avatar || technician?.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
                 alt={technician?.name} 
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`;
+                }}
               />
             </div>
           </div>
@@ -729,6 +732,9 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                   src={getStorageUrl(technician?.avatar || technician?.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
                   alt={technician?.name} 
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`;
+                  }}
                 />
               </div>
               <div>
@@ -853,6 +859,9 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                   src={getStorageUrl(technician?.avatar || technician?.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
                   alt={technician?.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`;
+                  }}
                 />
               </div>
               <div>

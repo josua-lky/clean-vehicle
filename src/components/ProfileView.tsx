@@ -583,7 +583,14 @@ export default function ProfileView({
         {/* Profile Card Hero */}
         <section className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-[#efedf0]">
           <div className="relative cursor-pointer select-none" onClick={handleOpenEditModal}>
-            <img className="w-16 h-16 rounded-full object-cover border-2 border-[#fdc003]" src={userAvatar} alt="Avatar profile" />
+            <img 
+              className="w-16 h-16 rounded-full object-cover border-2 border-[#fdc003]" 
+              src={userAvatar} 
+              alt="Avatar profile" 
+              onError={(e) => {
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'User')}&background=1B2337&color=F0C419`;
+              }}
+            />
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-black text-[#000f22] truncate">{userName}</h2>
