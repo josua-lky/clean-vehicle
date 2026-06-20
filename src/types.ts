@@ -59,6 +59,7 @@ export interface Transaction {
     name: string;
     rating: number;
     avatar: string;
+    profile_photo?: string;
     specialization?: string;
     area?: string;
   } | null;

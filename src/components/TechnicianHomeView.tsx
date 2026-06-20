@@ -66,6 +66,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
 
   // Edit Profile States
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [editName, setEditName] = useState(technician?.name || '');
   const [editAvatar, setEditAvatar] = useState(technician?.avatar || technician?.profile_photo || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -881,7 +882,10 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
             
             {/* Main Profile Info Card */}
             <div className="bg-white dark:bg-[#111827] rounded-[2rem] p-6 shadow-md border border-[#efedf0] dark:border-gray-800/40 flex flex-col items-center text-center space-y-4">
-              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#ffdf9e] shadow-md relative">
+              <div 
+                className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#ffdf9e] shadow-md relative cursor-pointer active:scale-95 transition-transform"
+                onClick={() => setShowPreviewModal(true)}
+              >
                 <img 
                   src={getStorageUrl(technician?.avatar || technician?.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
                   alt={technician?.name}
@@ -1398,6 +1402,33 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showPreviewModal && (
+        <div 
+          className="fixed inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center z-50 p-5 cursor-pointer"
+          onClick={() => setShowPreviewModal(false)}
+        >
+          <div className="relative max-w-full max-h-[80vh] flex flex-col items-center gap-4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowPreviewModal(false)}
+              className="absolute -top-12 right-0 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border-none cursor-pointer transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+            <div className="rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl max-w-full max-h-[70vh] bg-slate-900 flex items-center justify-center">
+              <img 
+                src={getStorageUrl(technician?.avatar || technician?.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
+                alt="Profile Preview" 
+                className="max-w-full max-h-[70vh] object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`;
+                }}
+              />
+            </div>
+            <p className="text-white text-sm font-black tracking-wide text-center">{technician?.name || 'Teknisi'}</p>
+          </div>
+        </div>
+      )}
       
     </div>
   );

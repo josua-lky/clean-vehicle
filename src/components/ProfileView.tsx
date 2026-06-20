@@ -60,6 +60,7 @@ export default function ProfileView({
   const [editVehType, setEditVehType] = useState<'mobil' | 'motor'>('mobil');
 
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [editName, setEditName] = useState(userName);
   const [editAvatar, setEditAvatar] = useState(userAvatar);
 
@@ -580,7 +581,7 @@ export default function ProfileView({
         
         {/* Profile Card Hero */}
         <section className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-[#efedf0]">
-          <div className="relative cursor-pointer select-none" onClick={handleOpenEditModal}>
+          <div className="relative cursor-pointer select-none" onClick={() => setShowPreviewModal(true)}>
             <img 
               className="w-16 h-16 rounded-full object-cover border-2 border-[#fdc003]" 
               src={userAvatar} 
@@ -1453,6 +1454,33 @@ export default function ProfileView({
                 Ya, Keluar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showPreviewModal && (
+        <div 
+          className="fixed inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center z-50 p-5 cursor-pointer animate-fade-in"
+          onClick={() => setShowPreviewModal(false)}
+        >
+          <div className="relative max-w-full max-h-[80vh] flex flex-col items-center gap-4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowPreviewModal(false)}
+              className="absolute -top-12 right-0 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white border-none cursor-pointer transition-colors"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
+            <div className="rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl max-w-full max-h-[70vh] bg-slate-900 flex items-center justify-center">
+              <img 
+                src={userAvatar} 
+                alt="Profile Preview" 
+                className="max-w-full max-h-[70vh] object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'User')}&background=1B2337&color=F0C419`;
+                }}
+              />
+            </div>
+            <p className="text-white text-sm font-black tracking-wide text-center">{userName}</p>
           </div>
         </div>
       )}

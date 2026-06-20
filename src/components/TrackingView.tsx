@@ -593,7 +593,7 @@ export default function TrackingView({ onBackToHome, userAvatar, userName, track
                         <img 
                           alt={techName} 
                           className="w-12 h-12 rounded-xl object-cover"
-                          src={getStorageUrl(bookingInfo?.technician?.avatar || trackedTransaction?.technician?.avatar) || `https://ui-avatars.com/api/?name=${encodeURIComponent(techName)}&background=1B2337&color=F0C419`}
+                          src={getStorageUrl(bookingInfo?.technician?.avatar || bookingInfo?.technician?.profile_photo || trackedTransaction?.technician?.avatar || trackedTransaction?.technician?.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(techName)}&background=1B2337&color=F0C419`}
                           onError={(e) => {
                             e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(techName)}&background=1B2337&color=F0C419`;
                           }}

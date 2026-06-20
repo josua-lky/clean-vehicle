@@ -351,6 +351,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
   const [activeToast, setActiveToast] = useState<{ title: string; description: string } | null>(null);
+  const [customAlert, setCustomAlert] = useState<{ message: string } | null>(null);
   const [readNotifIds, setReadNotifIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('readNotifIds');
     return saved ? JSON.parse(saved) : [];
@@ -968,6 +969,17 @@ export default function App() {
     }
   }, [activeToast]);
 
+  // Intercept window.alert to display beautiful custom modal dialogs instead of native browser popups
+  useEffect(() => {
+    const nativeAlert = window.alert;
+    window.alert = (message: any) => {
+      setCustomAlert({ message: String(message) });
+    };
+    return () => {
+      window.alert = nativeAlert;
+    };
+  }, []);
+
   const handleClearNotifications = () => {
     if (window.confirm('Hapus semua riwayat notifikasi?')) {
       const allIds = notifications.map(n => n.id);
@@ -1408,6 +1420,46 @@ export default function App() {
               <p className="text-[10px] text-[#768dad] font-semibold mt-0.5 leading-normal line-clamp-2">{activeToast.description}</p>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Alert Modal popup */}
+      <AnimatePresence>
+        {customAlert && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-5 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="bg-white dark:bg-[#111827] rounded-3xl p-6 shadow-2xl border border-[#efedf0] dark:border-gray-800/40 w-full max-w-sm flex flex-col items-center text-center gap-4 relative overflow-hidden"
+            >
+              {/* Decorative top yellow stripe */}
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#fdc003]"></div>
+              
+              {/* Icon */}
+              <div className="w-12 h-12 rounded-full bg-[#ffdf9e]/30 flex items-center justify-center text-[#785900] dark:text-[#fdc003] mt-2">
+                <span className="material-symbols-outlined text-2xl font-bold">info</span>
+              </div>
+              
+              {/* Message */}
+              <div className="space-y-1.5 w-full">
+                <h4 className="font-extrabold text-sm text-[#0a2540] dark:text-white uppercase tracking-wider">Pemberitahuan</h4>
+                <p className="text-xs font-semibold text-gray-600 dark:text-slate-400 leading-relaxed whitespace-pre-line">
+                  {customAlert.message}
+                </p>
+              </div>
+              
+              {/* Action Button */}
+              <button
+                type="button"
+                onClick={() => setCustomAlert(null)}
+                className="w-full py-3 bg-[#785900] hover:bg-[#5b4300] text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-all active:scale-[0.98] cursor-pointer border-none"
+              >
+                OK
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </>
