@@ -5,9 +5,11 @@ interface AlertsViewProps {
   onNavigate: (tab: 'home' | 'history' | 'alerts' | 'profile') => void;
   onCtaAction: (notif: NotificationItem) => void;
   notifications: NotificationItem[];
+  onClearAll?: () => void;
+  onDeleteNotif?: (id: string) => void;
 }
 
-export default function AlertsView({ onNavigate, onCtaAction, notifications }: AlertsViewProps) {
+export default function AlertsView({ onNavigate, onCtaAction, notifications, onClearAll, onDeleteNotif }: AlertsViewProps) {
   const [activeTab, setActiveTab] = useState<'semua' | 'pesanan' | 'promo' | 'info'>('semua');
 
   // Filter alerts from notifications
@@ -25,9 +27,15 @@ export default function AlertsView({ onNavigate, onCtaAction, notifications }: A
             <span className="material-symbols-outlined text-[#785900]">notifications</span>
             <h1 className="font-extrabold text-[#0a2540] text-lg tracking-tight">Notifikasi</h1>
           </div>
-          <button className="flex items-center justify-center p-2 rounded-xl hover:bg-slate-150 text-[#000d1a]">
-            <span className="material-symbols-outlined">mark_email_read</span>
-          </button>
+          {notifications.length > 0 && onClearAll && (
+            <button 
+              onClick={onClearAll}
+              title="Hapus Semua Riwayat Notifikasi"
+              className="flex items-center justify-center p-2 rounded-xl hover:bg-red-50 text-red-600 transition-colors"
+            >
+              <span className="material-symbols-outlined">delete_sweep</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -77,7 +85,21 @@ export default function AlertsView({ onNavigate, onCtaAction, notifications }: A
                 <div className="flex-1 space-y-1">
                   <div className="flex justify-between items-start gap-2">
                     <h4 className="text-xs font-extrabold text-[#000f22]">{notif.title}</h4>
-                    <span className="text-[10px] text-[#74777e] font-semibold tracking-tight uppercase shrink-0">{notif.time}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[10px] text-[#74777e] font-semibold tracking-tight uppercase">{notif.time}</span>
+                      {onDeleteNotif && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteNotif(notif.id);
+                          }}
+                          title="Hapus"
+                          className="text-[#74777e] hover:text-red-550 hover:bg-slate-100 p-0.5 rounded transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-xs">close</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <p className="text-xs text-[#43474d] leading-normal font-medium">{notif.description}</p>

@@ -126,7 +126,8 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
         bookingCode,
         time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
         date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
-        read: false
+        read: false,
+        timestamp: Date.now()
       };
       const updated = [newAlert, ...prev];
       localStorage.setItem(`tech_alerts_${technician?.id || 'default'}`, JSON.stringify(updated));
@@ -792,19 +793,33 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
 
         {activeTab === 'notifikasi' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-extrabold text-xs text-[#0a2540] dark:text-white uppercase tracking-wider">Pemberitahuan</h3>
+            <div class="flex justify-between items-center mb-2">
+              <h3 class="font-extrabold text-xs text-[#0a2540] dark:text-white uppercase tracking-wider">Pemberitahuan</h3>
               {alerts.length > 0 && (
-                <button 
-                  onClick={() => {
-                    const updated = alerts.map(a => ({ ...a, read: true }));
-                    setAlerts(updated);
-                    localStorage.setItem(`tech_alerts_${technician?.id || 'default'}`, JSON.stringify(updated));
-                  }}
-                  className="text-xs text-[#785900] dark:text-[#fdc003] font-bold bg-transparent border-none cursor-pointer hover:underline"
-                >
-                  Tandai Semua Dibaca
-                </button>
+                <div class="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      const updated = alerts.map(a => ({ ...a, read: true }));
+                      setAlerts(updated);
+                      localStorage.setItem(`tech_alerts_${technician?.id || 'default'}`, JSON.stringify(updated));
+                    }}
+                    className="text-xs text-[#785900] dark:text-[#fdc003] font-bold bg-transparent border-none cursor-pointer hover:underline"
+                  >
+                    Tandai Semua Dibaca
+                  </button>
+                  <span class="text-xs text-gray-300 dark:text-gray-700">|</span>
+                  <button 
+                    onClick={() => {
+                      if (window.confirm('Hapus semua riwayat notifikasi?')) {
+                        setAlerts([]);
+                        localStorage.removeItem(`tech_alerts_${technician?.id || 'default'}`);
+                      }
+                    }}
+                    className="text-xs text-red-600 dark:text-red-400 font-bold bg-transparent border-none cursor-pointer hover:underline"
+                  >
+                    Hapus Semua
+                  </button>
+                </div>
               )}
             </div>
             {alerts.length === 0 ? (
@@ -815,7 +830,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
               </div>
             ) : (
               <div className="space-y-3">
-                {alerts.map((item) => (
+                {[...alerts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).map((item) => (
                   <div 
                     key={item.id}
                     onClick={() => handleAlertClick(item)}
@@ -841,6 +856,18 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                       </div>
                       <p className="text-[11px] text-gray-600 dark:text-slate-400 font-medium leading-relaxed">{item.description}</p>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const updated = alerts.filter(a => a.id !== item.id);
+                        setAlerts(updated);
+                        localStorage.setItem(`tech_alerts_${technician?.id || 'default'}`, JSON.stringify(updated));
+                      }}
+                      title="Hapus"
+                      className="absolute right-4 top-4 text-gray-400 dark:text-slate-500 hover:text-red-500 p-0.5 rounded transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
                   </div>
                 ))}
               </div>

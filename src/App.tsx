@@ -64,7 +64,8 @@ export default function App() {
               description: promo.description || `Gunakan kode ${promo.code} untuk mendapatkan potongan harga spesial!`,
               idTag: promo.code,
               hasCta: true,
-              ctaText: 'GUNAKAN PROMO'
+              ctaText: 'GUNAKAN PROMO',
+              timestamp: new Date(promo.created_at || Date.now()).getTime()
             };
 
             newlyAddedNotifs.push(newNotif);
@@ -354,6 +355,10 @@ export default function App() {
     const saved = localStorage.getItem('readNotifIds');
     return saved ? JSON.parse(saved) : [];
   });
+  const [deletedNotifIds, setDeletedNotifIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('deletedNotifIds');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const formatNotifTime = (dateStr: string) => {
     if (!dateStr) return 'Baru Saja';
@@ -478,7 +483,8 @@ export default function App() {
                 description: `Pesanan cuci kendaraan (${b.vehicle_name || (b.vehicle ? b.vehicle.brand + ' ' + b.vehicle.model : 'Kendaraan')}) Anda dengan kode ${b.booking_code} telah dikonfirmasi. Petugas/teknisi akan segera memproses pencucian sesuai jadwal.`,
                 idTag: b.booking_code,
                 hasCta: true,
-                ctaText: 'LACAK PROSES'
+                ctaText: 'LACAK PROSES',
+                timestamp: new Date(b.updated_at || b.created_at || b.scheduled_at).getTime()
               });
             }
           }
@@ -494,7 +500,8 @@ export default function App() {
                 description: `Teknisi ${b.technician?.name || 'kami'} sedang dalam perjalanan menuju lokasi Anda untuk mencuci kendaraan ${b.vehicle_name || (b.vehicle ? b.vehicle.brand + ' ' + b.vehicle.model : 'Kendaraan')}.`,
                 idTag: b.booking_code,
                 hasCta: true,
-                ctaText: 'LACAK PROSES'
+                ctaText: 'LACAK PROSES',
+                timestamp: new Date(b.updated_at || b.created_at || b.scheduled_at).getTime()
               });
             }
           }
@@ -510,7 +517,8 @@ export default function App() {
                 description: `Kendaraan ${b.vehicle_name || (b.vehicle ? b.vehicle.brand + ' ' + b.vehicle.model : 'Kendaraan')} Anda sedang dalam proses pencucian oleh teknisi ${b.technician?.name || 'kami'}.`,
                 idTag: b.booking_code,
                 hasCta: true,
-                ctaText: 'LACAK PROSES'
+                ctaText: 'LACAK PROSES',
+                timestamp: new Date(b.updated_at || b.created_at || b.scheduled_at).getTime()
               });
             }
           }
@@ -526,7 +534,8 @@ export default function App() {
                 description: `Layanan ${b.package?.name || 'Cuci Kendaraan'} untuk kendaraan ${b.vehicle_name || (b.vehicle ? b.vehicle.brand + ' ' + b.vehicle.model : 'Kendaraan')} telah selesai dikerjakan. Terima kasih telah memercayai kami!`,
                 idTag: b.booking_code,
                 hasCta: true,
-                ctaText: 'TULIS ULASAN'
+                ctaText: 'TULIS ULASAN',
+                timestamp: new Date(b.updated_at || b.created_at || b.scheduled_at).getTime()
               });
             }
           }
@@ -556,7 +565,8 @@ export default function App() {
                   total: Number(b.total_amount),
                   method: formatPaymentMethod(b.payment.payment_method, b.payment.payment_provider),
                   date: formattedDate
-                }
+                },
+                timestamp: new Date(b.payment.paid_at || b.payment.updated_at || b.updated_at).getTime()
               });
             }
           }
@@ -570,15 +580,22 @@ export default function App() {
               description: `Dana refund sebesar Rp ${Number(b.payment.refund_amount || b.payment.amount).toLocaleString('id-ID')} untuk pemesanan ${b.booking_code} telah dikembalikan oleh admin ke saldo e-wallet OnoPay Anda.`,
               idTag: b.booking_code,
               hasCta: true,
-              ctaText: 'DETAIL PESANAN'
+              ctaText: 'DETAIL PESANAN',
+              timestamp: new Date(b.payment.refunded_at || b.payment.updated_at || b.updated_at).getTime()
             });
           }
         });
       }
 
+      // Sort derived notifications descending by timestamp (newest first)
+      derivedNotifs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      // Filter out deleted notifications
+      const activeNotifs = derivedNotifs.filter(n => !deletedNotifIds.includes(n.id));
+
       setNotifications(prev => {
         if (prev.length > 0) {
-          const newItems = derivedNotifs.filter(n => !prev.some(p => p.id === n.id));
+          const newItems = activeNotifs.filter(n => !prev.some(p => p.id === n.id));
           if (newItems.length > 0) {
             const latestNew = newItems[0];
             setActiveToast({
@@ -587,7 +604,7 @@ export default function App() {
             });
           }
         }
-        return derivedNotifs;
+        return activeNotifs;
       });
     } catch (error) {
       console.log(error);
@@ -962,6 +979,25 @@ export default function App() {
     }
   }, [activeToast]);
 
+  const handleClearNotifications = () => {
+    if (window.confirm('Hapus semua riwayat notifikasi?')) {
+      const allIds = notifications.map(n => n.id);
+      const updated = Array.from(new Set([...deletedNotifIds, ...allIds]));
+      setDeletedNotifIds(updated);
+      localStorage.setItem('deletedNotifIds', JSON.stringify(updated));
+      setPromoNotifications([]);
+      localStorage.setItem('promoNotifications', JSON.stringify([]));
+      setNotifications([]);
+    }
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    const updated = [...deletedNotifIds, id];
+    setDeletedNotifIds(updated);
+    localStorage.setItem('deletedNotifIds', JSON.stringify(updated));
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
   const unreadCount = notifications.filter(n => !readNotifIds.includes(n.id)).length;
 
   if (authLoading) {
@@ -1257,6 +1293,8 @@ export default function App() {
           >
             <AlertsView 
               notifications={notifications}
+              onClearAll={handleClearNotifications}
+              onDeleteNotif={handleDeleteNotification}
               onNavigate={(tab) => {
                 if (tab === 'home') navigateTo('dashboard');
                 else if (tab === 'history') navigateTo('history');

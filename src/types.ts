@@ -85,6 +85,7 @@ export interface NotificationItem {
   hasCta?: boolean;
   ctaText?: string;
   receipt?: ReceiptItem;
+  timestamp?: number;
 }
 
 export interface BookingState {
