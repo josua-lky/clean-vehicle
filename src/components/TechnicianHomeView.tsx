@@ -2,6 +2,24 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import api from '../services/api';
 
+const getStorageUrl = (path?: string) => {
+  if (!path) return '';
+  if (path.startsWith('data:image/')) return path;
+  
+  let relativePath = path;
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    const parts = path.split('/storage/');
+    if (parts.length > 1) {
+      relativePath = parts[1];
+    } else {
+      return path;
+    }
+  }
+  
+  const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, '') : 'http://127.0.0.1:8000';
+  return `${baseUrl}/storage/${relativePath}`;
+};
+
 interface TechnicianHomeViewProps {
   darkMode: boolean;
   onToggleTheme: () => void;
@@ -443,20 +461,11 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200/50 shrink-0">
                 <img 
-                  src={
-                    job.customer?.avatar ||
-                    job.customer?.profile_photo ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=1B2337&color=F0C419`
-                  } 
+                  src={getStorageUrl(job.customer?.avatar || job.customer?.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=1B2337&color=F0C419`}
                   alt={customerName} 
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    const photo = job.customer?.profile_photo;
-                    if (photo && !photo.startsWith('http')) {
-                      e.currentTarget.src = `https://vclean.web.id/storage/${photo}`;
-                    } else {
-                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=1B2337&color=F0C419`;
-                    }
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=1B2337&color=F0C419`;
                   }}
                 />
               </div>
@@ -545,7 +554,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
               <div className="bg-[#f8f7f9] dark:bg-[#151f32]/60 rounded-xl p-1.5 border dark:border-gray-800">
                 <p className="text-[9px] font-bold text-gray-500 uppercase text-center mb-1">Sebelum</p>
                 <img 
-                  src={`http://127.0.0.1:8000/storage/${job.before_photo}`} 
+                  src={getStorageUrl(job.before_photo)} 
                   alt="Sebelum" 
                   className="w-full h-24 object-cover rounded-lg shadow-sm"
                 />
@@ -555,7 +564,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
               <div className="bg-[#f8f7f9] dark:bg-[#151f32]/60 rounded-xl p-1.5 border dark:border-gray-800">
                 <p className="text-[9px] font-bold text-gray-500 uppercase text-center mb-1">Sesudah</p>
                 <img 
-                  src={`http://127.0.0.1:8000/storage/${job.after_photo}`} 
+                  src={getStorageUrl(job.after_photo)} 
                   alt="Sesudah" 
                   className="w-full h-24 object-cover rounded-lg shadow-sm"
                 />
@@ -669,7 +678,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
               className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-[#ffdf9e] shadow-sm relative cursor-pointer active:scale-95 transition-all"
             >
               <img 
-                src={technician?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
+                src={getStorageUrl(technician?.avatar || technician?.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
                 alt={technician?.name} 
                 className="w-full h-full object-cover"
               />
@@ -717,7 +726,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
             <div className="bg-white dark:bg-[#111827] rounded-[2rem] p-4 border border-[#efedf0] dark:border-gray-800/40 shadow-sm flex items-center gap-3">
               <div className="w-12 h-12 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-[#ffdf9e] shadow-sm">
                 <img 
-                  src={technician?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
+                  src={getStorageUrl(technician?.avatar || technician?.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
                   alt={technician?.name} 
                   className="w-full h-full object-cover"
                 />
@@ -841,7 +850,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
             <div className="bg-white dark:bg-[#111827] rounded-[2rem] p-6 shadow-md border border-[#efedf0] dark:border-gray-800/40 flex flex-col items-center text-center space-y-4">
               <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-[#ffdf9e] shadow-md relative">
                 <img 
-                  src={technician?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
+                  src={getStorageUrl(technician?.avatar || technician?.profile_photo) || `https://ui-avatars.com/api/?name=${encodeURIComponent(technician?.name || 'Teknisi')}&background=1B2337&color=F0C419`} 
                   alt={technician?.name}
                   className="w-full h-full object-cover"
                 />

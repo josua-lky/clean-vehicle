@@ -352,7 +352,7 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
                                   <div className="rounded-xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm">
                                     <p className="text-[8px] font-bold text-center bg-gray-100 dark:bg-gray-800 text-gray-500 py-0.5">Sebelum</p>
                                     <img 
-                                      src={`http://127.0.0.1:8000/storage/${item.beforePhoto}`} 
+                                      src={item.beforePhoto} 
                                       alt="Sebelum Cuci" 
                                       className="w-full h-20 object-cover"
                                     />
@@ -362,7 +362,7 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
                                   <div className="rounded-xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm">
                                     <p className="text-[8px] font-bold text-center bg-gray-100 dark:bg-gray-800 text-gray-500 py-0.5">Sesudah</p>
                                     <img 
-                                      src={`http://127.0.0.1:8000/storage/${item.afterPhoto}`} 
+                                      src={item.afterPhoto} 
                                       alt="Setelah Cuci" 
                                       className="w-full h-20 object-cover"
                                     />

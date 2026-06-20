@@ -3,6 +3,24 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Transaction } from '../types';
 import api from '../services/api';
 
+const getStorageUrl = (path?: string) => {
+  if (!path) return '';
+  if (path.startsWith('data:image/')) return path;
+  
+  let relativePath = path;
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    const parts = path.split('/storage/');
+    if (parts.length > 1) {
+      relativePath = parts[1];
+    } else {
+      return path;
+    }
+  }
+  
+  const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, '') : 'http://127.0.0.1:8000';
+  return `${baseUrl}/storage/${relativePath}`;
+};
+
 interface TrackingViewProps {
   onBackToHome: () => void;
   userAvatar?: string;
@@ -496,7 +514,7 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
                         <div className="rounded-xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm">
                           <p className="text-[9px] font-bold text-center bg-gray-100 dark:bg-gray-800 text-gray-500 py-0.5">Sebelum</p>
                           <img 
-                            src={`http://127.0.0.1:8000/storage/${bookingInfo.before_photo}`} 
+                            src={getStorageUrl(bookingInfo.before_photo)} 
                             alt="Sebelum Cuci" 
                             className="w-full h-20 object-cover"
                           />
@@ -506,7 +524,7 @@ export default function TrackingView({ onBackToHome, userAvatar, trackedTransact
                         <div className="rounded-xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm">
                           <p className="text-[9px] font-bold text-center bg-gray-100 dark:bg-gray-800 text-gray-500 py-0.5">Sesudah</p>
                           <img 
-                            src={`http://127.0.0.1:8000/storage/${bookingInfo.after_photo}`} 
+                            src={getStorageUrl(bookingInfo.after_photo)} 
                             alt="Setelah Cuci" 
                             className="w-full h-20 object-cover"
                           />

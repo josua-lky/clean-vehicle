@@ -112,7 +112,12 @@ export default function App() {
   const fetchDbTechnicians = async () => {
     try {
       const response = await api.get('/technicians');
-      setDbTechnicians(response.data);
+      const mapped = response.data.map((t: any) => ({
+        ...t,
+        avatar: getStorageUrl(t.avatar || t.profile_photo) || 
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1B2337&color=F0C419`
+      }));
+      setDbTechnicians(mapped);
     } catch (err) {
       console.log('Error fetching technicians:', err);
     }
@@ -290,14 +295,29 @@ export default function App() {
 
   // Authenticated state
   const [user, setUser] = useState<any>(null);
+  const getStorageUrl = (path?: string) => {
+    if (!path) return '';
+    if (path.startsWith('data:image/')) return path;
+    
+    let relativePath = path;
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      const parts = path.split('/storage/');
+      if (parts.length > 1) {
+        relativePath = parts[1];
+      } else {
+        return path;
+      }
+    }
+    
+    const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, '') : 'http://127.0.0.1:8000';
+    return `${baseUrl}/storage/${relativePath}`;
+  };
+
   const getAvatarUrl = () => {
     if (!user) return 'https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17';
-    if (user.avatar) return user.avatar;
+    if (user.avatar) return getStorageUrl(user.avatar);
     if (user.profile_photo) {
-      if (user.profile_photo.startsWith('http://') || user.profile_photo.startsWith('https://') || user.profile_photo.startsWith('data:image/')) {
-        return user.profile_photo;
-      }
-      return `http://127.0.0.1:8000/storage/${user.profile_photo}`;
+      return getStorageUrl(user.profile_photo);
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=1B2337&color=F0C419`;
   };
@@ -406,8 +426,8 @@ export default function App() {
         promoCode: b.promo?.code,
         serviceAddress: b.service_address || '',
         serviceType: b.service_type || 'home',
-        beforePhoto: b.before_photo || undefined,
-        afterPhoto: b.after_photo || undefined,
+        beforePhoto: b.before_photo ? getStorageUrl(b.before_photo) : undefined,
+        afterPhoto: b.after_photo ? getStorageUrl(b.after_photo) : undefined,
         rating: b.review ? Number(b.review.rating) : undefined,
         reviewText: b.review ? b.review.comment : undefined,
         cancelledReason: b.cancelled_reason || '',
@@ -420,9 +440,8 @@ export default function App() {
           id: String(b.technician.id),
           name: b.technician.name,
           rating: Number(b.technician.rating || 4.5),
-          avatar: b.technician.avatar || (b.technician.profile_photo 
-            ? `http://127.0.0.1:8000/storage/${b.technician.profile_photo}`
-            : `https://ui-avatars.com/api/?name=${encodeURIComponent(b.technician.name)}&background=1B2337&color=F0C419`),
+          avatar: getStorageUrl(b.technician.avatar || b.technician.profile_photo) || 
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(b.technician.name)}&background=1B2337&color=F0C419`,
           specialization: b.technician.specialization,
           area: b.technician.area
         } : null

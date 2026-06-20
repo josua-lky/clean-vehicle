@@ -74,7 +74,7 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
       rating: Number(t.rating || 4.5),
       reviewsCount: t.total_orders || 120,
       avatar: t.avatar || (t.profile_photo 
-        ? `http://127.0.0.1:8000/storage/${t.profile_photo}`
+        ? (t.profile_photo.startsWith('http') ? t.profile_photo : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://127.0.0.1:8000' : 'https://vclean.web.id') + '/storage/' + t.profile_photo)
         : `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1B2337&color=F0C419`),
       specialties: t.specialization ? [t.specialization === 'motor' ? 'Motor' : 'Mobil', t.area || 'All Rounder'] : ['Pembersihan', 'Detil Luar'],
       specialization: t.specialization,
