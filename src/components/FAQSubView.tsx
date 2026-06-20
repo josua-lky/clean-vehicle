@@ -258,15 +258,6 @@ export default function FAQSubView({ onBack, onNavigate }: FAQSubViewProps) {
 
           <button 
             type="button"
-            onClick={() => { onBack(); onNavigate('alerts'); }} 
-            className="flex flex-col items-center justify-center text-[#74777e] hover:text-[#000f22] transition-colors cursor-pointer text-xs font-semibold gap-1"
-          >
-            <span className="material-symbols-outlined">notifications</span>
-            <span className="uppercase tracking-wider text-[9px]">Alerts</span>
-          </button>
-
-          <button 
-            type="button"
             onClick={onBack} 
             className="flex flex-col items-center justify-center text-[#fdc003] bg-[#ffdf9e]/30 rounded-2xl px-5 py-2 active:scale-95 transition-transform duration-150 cursor-pointer text-xs font-bold gap-1"
           >

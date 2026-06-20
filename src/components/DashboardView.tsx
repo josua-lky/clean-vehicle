@@ -638,13 +638,7 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
 
       </main>
 
-      {/* Floating Action Button for quick booking */}
-      <button 
-        onClick={() => onBookService('rumah')}
-        className="fixed bottom-24 right-6 h-14 w-14 bg-[#fdc003] text-[#000f22] rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-40 hover:brightness-105 cursor-pointer border border-white/25"
-      >
-        <span className="material-symbols-outlined text-2xl font-bold">calendar_month</span>
-      </button>
+
 
       {/* Bottom Nav Bar Navigation */}
       <nav className="bg-white/95 backdrop-blur-lg border-t border-[#efedf0] shadow-2lg fixed bottom-0 left-0 w-full z-50">

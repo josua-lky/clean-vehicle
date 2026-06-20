@@ -398,9 +398,9 @@ export default function App() {
           id: String(b.technician.id),
           name: b.technician.name,
           rating: Number(b.technician.rating || 4.5),
-          avatar: b.technician.profile_photo 
+          avatar: b.technician.avatar || (b.technician.profile_photo 
             ? `http://127.0.0.1:8000/storage/${b.technician.profile_photo}`
-            : `https://ui-avatars.com/api/?name=${encodeURIComponent(b.technician.name)}&background=1B2337&color=F0C419`,
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(b.technician.name)}&background=1B2337&color=F0C419`),
           specialization: b.technician.specialization,
           area: b.technician.area
         } : null

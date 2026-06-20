@@ -46,6 +46,50 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
   const [activeToast, setActiveToast] = useState<{ title: string; description: string } | null>(null);
   const prevBookingsRef = useRef<any[]>([]);
 
+  // Edit Profile States
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editName, setEditName] = useState(technician?.name || '');
+  const [editAvatar, setEditAvatar] = useState(technician?.avatar || technician?.profile_photo || '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const handleOpenEditModal = () => {
+    setEditName(technician?.name || '');
+    setEditAvatar(technician?.avatar || technician?.profile_photo || '');
+    setShowEditProfileModal(true);
+  };
+
+  const handleProfileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditAvatar(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleEditProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName.trim()) return;
+    try {
+      setIsSavingProfile(true);
+      await api.put('/technician/profile', {
+        name: editName,
+        profile_photo: editAvatar
+      });
+      if (onRefreshProfile) {
+        onRefreshProfile();
+      }
+      setShowEditProfileModal(false);
+    } catch (error) {
+      console.log('Error saving technician profile:', error);
+      alert('Gagal menyimpan profil');
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   // Auto-dismiss toast
   useEffect(() => {
     if (activeToast) {
@@ -366,10 +410,31 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
         {/* Customer Detail Block */}
         <div className="space-y-3">
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-gray-800/40 pb-2">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500">Nama Customer</p>
-              <h4 className="font-extrabold text-[#000f22] dark:text-white text-sm mt-0.5">{customerName}</h4>
-              <p className="text-[11px] text-gray-550 dark:text-slate-400 font-bold">{customerPhone}</p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200/50 shrink-0">
+                <img 
+                  src={
+                    job.customer?.avatar ||
+                    job.customer?.profile_photo ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=1B2337&color=F0C419`
+                  } 
+                  alt={customerName} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const photo = job.customer?.profile_photo;
+                    if (photo && !photo.startsWith('http')) {
+                      e.currentTarget.src = `https://vclean.web.id/storage/${photo}`;
+                    } else {
+                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=1B2337&color=F0C419`;
+                    }
+                  }}
+                />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-slate-500">Nama Customer</p>
+                <h4 className="font-extrabold text-[#000f22] dark:text-white text-sm mt-0.5">{customerName}</h4>
+                <p className="text-[11px] text-gray-550 dark:text-slate-400 font-bold">{customerPhone}</p>
+              </div>
             </div>
             
             {/* Quick Actions (Call / Chat) */}
@@ -745,6 +810,13 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
               <div>
                 <h4 className="font-extrabold text-[#000f22] dark:text-white text-lg leading-tight">{technician?.name}</h4>
                 <p className="text-xs text-[#785900] dark:text-[#fdc003] font-bold mt-1 uppercase tracking-wider">{technician?.specialization || 'Spesialis Cuci'}</p>
+                <button 
+                  onClick={handleOpenEditModal}
+                  className="mt-2.5 px-4 py-1.5 bg-[#f5f3f6] dark:bg-[#1a2333] hover:bg-[#efedf0] dark:hover:bg-[#253046] text-[#0a2540] dark:text-white rounded-lg text-[10px] font-bold uppercase border-none cursor-pointer active:scale-95 transition-all flex items-center justify-center gap-1 mx-auto"
+                >
+                  <span className="material-symbols-outlined text-[12px]">edit</span>
+                  Edit Profil
+                </button>
               </div>
             </div>
 
@@ -1141,6 +1213,82 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
           </div>
         )}
       </AnimatePresence>
+
+      {/* Edit Profile Modal for Technician */}
+      {showEditProfileModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-5">
+          <form onSubmit={handleEditProfileSubmit} className="bg-white dark:bg-[#111827] rounded-3xl p-6 w-full max-w-sm shadow-2xl border border-slate-100 dark:border-gray-800 space-y-4 animate-scale-in text-[#1b1c1e] dark:text-[#f3f4f6]">
+            <div className="flex justify-between items-center">
+              <h3 className="text-base font-extrabold text-[#000f22] dark:text-white">Edit Profil Teknisi</h3>
+              <button 
+                type="button" 
+                onClick={() => setShowEditProfileModal(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 dark:bg-gray-800 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors border-none"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Name Input */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-extrabold text-[#74777e] dark:text-slate-450 uppercase tracking-wider">Nama Lengkap</label>
+                <input 
+                  type="text" 
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Contoh: Alex Sterling"
+                  className="bg-[#f5f3f6] dark:bg-[#1a2333] border border-[#e3e2e5] dark:border-gray-800 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:ring-1 focus:ring-[#fdc003] outline-none w-full text-[#1b1c1e] dark:text-white"
+                  required
+                />
+              </div>
+
+              {/* Custom File Upload (Gallery / Camera) */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-extrabold text-[#74777e] dark:text-slate-450 uppercase tracking-wider">Unggah Foto (Kamera / Galeri)</label>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={handleProfileFileChange}
+                  className="bg-[#f5f3f6] dark:bg-[#1a2333] border border-[#e3e2e5] dark:border-gray-800 rounded-xl px-3.5 py-2 text-[11px] outline-none w-full cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-[#fdc003] file:text-[#6c5000]"
+                />
+              </div>
+
+              {/* Preview */}
+              {editAvatar && (
+                <div className="flex items-center gap-2 mt-1 bg-slate-50 dark:bg-[#1a2333]/50 p-2 rounded-lg border border-dashed border-[#e3e2e5] dark:border-gray-800">
+                  <img 
+                    src={editAvatar} 
+                    className="w-8 h-8 rounded-full object-cover shrink-0" 
+                    alt="Preview" 
+                    onError={(e)=>{
+                      e.currentTarget.src='https://ui-avatars.com/api/?name=Teknisi&background=1B2337&color=F0C419';
+                    }} 
+                  />
+                  <span className="text-[9px] text-[#74777e] dark:text-slate-400 font-semibold truncate">Preview Foto Profil</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2.5 pt-3">
+              <button 
+                type="button"
+                onClick={() => setShowEditProfileModal(false)}
+                className="flex-1 py-3 bg-slate-100 dark:bg-gray-800 hover:bg-slate-200 text-slate-705 dark:text-slate-300 rounded-xl font-bold text-xs cursor-pointer active:scale-95 transition-all text-center border-none"
+              >
+                Batal
+              </button>
+              <button 
+                type="submit"
+                disabled={isSavingProfile}
+                className="flex-1 py-3 bg-[#fdc003] hover:bg-[#fabd00] text-[#6c5000] rounded-xl font-bold text-xs cursor-pointer shadow-md active:scale-95 transition-all text-center border-none"
+              >
+                {isSavingProfile ? 'Menyimpan...' : 'Simpan'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Toast Alert Pop Up */}
       <AnimatePresence>

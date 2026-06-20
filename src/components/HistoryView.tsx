@@ -418,23 +418,6 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
           </div>
         </section>
 
-        {/* Invited Referral block box */}
-        <section className="pb-10">
-          <div className="relative rounded-2xl overflow-hidden bg-[#0a2540] text-white p-5">
-            <div className="relative z-10 space-y-2">
-              <h3 className="text-base font-bold text-white leading-snug">Bagikan Pengalaman</h3>
-              <p className="text-xs text-[#768dad] leading-relaxed max-w-[220px]">
-                Hadiahkan voucher cuci mobil gratis untuk teman dan dapatkan diskon 20% jasa berikutnya!
-              </p>
-              <button className="mt-3 bg-[#fdc003] hover:bg-[#fabd00] text-[#6c5000] font-bold text-xs px-4 py-2 rounded-lg cursor-pointer">
-                Ajak Teman
-              </button>
-            </div>
-            <div className="absolute top-0 right-0 h-full w-1/3 opacity-20 pointer-events-none">
-              <span className="material-symbols-outlined text-[120px] absolute -right-4 -top-2" style={{ fontVariationSettings: "'FILL' 1" }}>redeem</span>
-            </div>
-          </div>
-        </section>
 
       </main>
 

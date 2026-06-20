@@ -39,9 +39,9 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
     name: t.name,
     rating: Number(t.rating || 4.5),
     reviewsCount: t.total_orders || 120,
-    avatar: t.profile_photo 
+    avatar: t.avatar || (t.profile_photo 
       ? `http://127.0.0.1:8000/storage/${t.profile_photo}`
-      : `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1B2337&color=F0C419`
+      : `https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=1B2337&color=F0C419`)
   })).find(t => String(t.id) === String(booking.selectedTechnicianId))
   || { name: 'Kru Clean Vehicle', rating: 4.8, avatar: 'https://ui-avatars.com/api/?name=Clean+Vehicle' };
 

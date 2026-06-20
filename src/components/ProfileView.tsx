@@ -65,6 +65,17 @@ export default function ProfileView({
 
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditAvatar(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleOpenEditModal = () => {
     setEditName(userName);
     setEditAvatar(userAvatar);
@@ -573,9 +584,6 @@ export default function ProfileView({
         <section className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-[#efedf0]">
           <div className="relative cursor-pointer select-none" onClick={handleOpenEditModal}>
             <img className="w-16 h-16 rounded-full object-cover border-2 border-[#fdc003]" src={userAvatar} alt="Avatar profile" />
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#0a2540] text-white rounded-full flex items-center justify-center border border-white">
-              <span className="material-symbols-outlined text-[10px]">edit</span>
-            </div>
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-black text-[#000f22] truncate">{userName}</h2>
@@ -901,12 +909,23 @@ export default function ProfileView({
                   </div>
                 </div>
 
+                {/* Custom File Upload (Gallery / Camera) */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-extrabold text-[#74777e] uppercase tracking-wider">Unggah Foto (Kamera / Galeri)</label>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="bg-[#f5f3f6] border border-[#e3e2e5] rounded-xl px-3.5 py-2 text-[11px] outline-none w-full cursor-pointer file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-[#fdc003] file:text-[#6c5000]"
+                  />
+                </div>
+
                 {/* Custom Avatar URL */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] font-extrabold text-[#74777e] uppercase tracking-wider">Atau Link Foto Kustom (URL)</label>
                   <input 
                     type="url" 
-                    value={editAvatar}
+                    value={editAvatar.startsWith('data:image/') ? '' : editAvatar}
                     onChange={(e) => setEditAvatar(e.target.value)}
                     placeholder="https://example.com/item.jpg"
                     className="bg-[#f5f3f6] border border-[#e3e2e5] rounded-xl px-3.5 py-2.5 text-[11px] font-mono focus:ring-1 focus:ring-[#fdc003] outline-none w-full"
