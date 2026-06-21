@@ -204,6 +204,20 @@ export default function App() {
   };
 
   useEffect(() => {
+    // Add interceptor to catch 403 errors and update user status to 'inactive'
+    const interceptor = api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 403) {
+          const errMsg = error.response.data?.message || '';
+          if (errMsg.toLowerCase().includes('nonaktif') || errMsg.toLowerCase().includes('dinonaktifkan')) {
+            setUser(prev => prev ? { ...prev, status: 'inactive' } : { status: 'inactive' });
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -231,8 +245,24 @@ export default function App() {
           const savedScreen = localStorage.getItem('currentScreen');
           setCurrentScreen((savedScreen as any) || 'dashboard');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.log(error);
+        if (error?.response?.status === 403) {
+          const errMsg = error.response.data?.message || '';
+          if (errMsg.toLowerCase().includes('nonaktif') || errMsg.toLowerCase().includes('dinonaktifkan')) {
+            const role = localStorage.getItem('role') || 'customer';
+            setUserRole(role as 'customer' | 'technician');
+            setIsLoggedIn(true);
+            let name = 'Pengguna';
+            try {
+              const savedUser = localStorage.getItem('user');
+              if (savedUser) name = JSON.parse(savedUser).name || 'Pengguna';
+            } catch (_) {}
+            setUser({ status: 'inactive', name });
+            setAuthLoading(false);
+            return;
+          }
+        }
         localStorage.clear();
         setUser(null);
         setUserRole('customer');
@@ -243,6 +273,10 @@ export default function App() {
     };
 
     checkAuth();
+
+    return () => {
+      api.interceptors.response.eject(interceptor);
+    };
   }, []);
 
   const handleToggleTheme = () => {
@@ -628,7 +662,8 @@ export default function App() {
     locationName: 'Kuningan, Jakarta Selatan',
     pickupLocation: 'Sudirman Central Business District, Jakarta',
     selectedCarId: '',
-    paymentMethod: 'bank'
+    paymentMethod: 'bank',
+    notes: ''
   });
 
   const [paymentDetails, setPaymentDetails] = useState({
@@ -835,7 +870,7 @@ export default function App() {
         service_type: (booking.pickupLocation.toLowerCase().includes('outlet') || booking.locationName.toLowerCase().includes('outlet')) ? 'outlet' : 'home',
         scheduled_at: parseBookingDate(),
         service_address: booking.pickupLocation || 'Alamat customer',
-        notes: 'Pemesanan dari React',
+        notes: booking.notes ? booking.notes.trim() : null,
         promo_code: booking.appliedPromoCode || null,
         technician_id: booking.selectedTechnicianId ? Number(booking.selectedTechnicianId) : null,
         outlet_id: booking.selectedOutletId ? Number(booking.selectedOutletId) : null
@@ -852,7 +887,7 @@ export default function App() {
       
       setActiveTrackedOrderId(generatedId);
       setPaymentDetails({ amount, method: methodUsed });
-      setBooking(prev => ({ ...prev, appliedPromoCode: null }));
+      setBooking(prev => ({ ...prev, appliedPromoCode: null, notes: '' }));
       navigateTo('success');
     } catch (err: any) {
       console.log('Create booking api error:', err);
@@ -998,7 +1033,40 @@ export default function App() {
   return (
     <>
       <AnimatePresence mode="wait">
-        {currentScreen === 'welcome' && (
+        {isLoggedIn && user?.status === 'inactive' ? (
+          <motion.div
+            key="inactive-account"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6 text-center"
+          >
+            <div className="max-w-md bg-slate-800 rounded-3xl p-8 border border-slate-700/50 shadow-2xl flex flex-col items-center gap-5">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/30 text-red-500 animate-pulse">
+                <span className="material-symbols-outlined text-[32px]">block</span>
+              </div>
+              <h2 className="text-xl font-black text-white">Akun Anda Dinonaktifkan</h2>
+              <p className="text-xs text-slate-400 font-semibold leading-relaxed">
+                Halo, {user?.name}. Status akun {userRole === 'technician' ? 'teknisi' : 'pelanggan'} Anda saat ini sedang dinonaktifkan oleh administrator. Anda tidak dapat menggunakan fitur aplikasi Clean Vehicle.
+              </p>
+              <div className="p-3.5 bg-slate-900/60 rounded-xl border border-slate-700/30 w-full text-[11px] font-bold text-slate-400">
+                Hubungi administrator untuk mengaktifkan kembali akun Anda.
+              </div>
+              <button
+                onClick={() => {
+                  setUser(null);
+                  setIsLoggedIn(false);
+                  localStorage.clear();
+                  navigateTo('welcome');
+                }}
+                className="w-full py-3 bg-red-600 hover:bg-red-750 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer border-none"
+              >
+                Keluar Aplikasi
+              </button>
+            </div>
+          </motion.div>
+        ) : (
+          <>
+            {currentScreen === 'welcome' && (
           <motion.div
             key="welcome"
             initial={{ opacity: 0, y: 12 }}
@@ -1367,6 +1435,8 @@ export default function App() {
               onRefreshProfile={fetchProfile}
             />
           </motion.div>
+        )}
+          </>
         )}
       </AnimatePresence>
 

@@ -102,4 +102,5 @@ export interface BookingState {
   paymentMethod: 'bank' | 'wallet' | 'card';
   appliedPromoCode?: string | null;
   selectedOutletId?: string | null;
+  notes?: string;
 }

@@ -324,9 +324,9 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
                           </div>
 
                            <div className="bg-[#ffdf9e]/15 p-2.5 rounded-xl border border-[#ffdf9e]/30 mt-1">
-                            <span className="text-[9px] text-[#785900] block font-bold uppercase tracking-wider mb-0.5">Keterangan Layanan</span>
+                            <span className="text-[9px] text-[#785900] block font-bold uppercase tracking-wider mb-0.5">Catatan Tambahan</span>
                             <p className="text-slate-600 font-semibold leading-relaxed text-[10px]">
-                              {item.additionalNotes || 'Penyemprotan bodi merata dengan foam berbusa tebal pH seimbang, pengeringan halus vacuum, plus pelat pelindung kilat.'}
+                              {item.additionalNotes || 'Tidak ada catatan tambahan.'}
                             </p>
                           </div>
 

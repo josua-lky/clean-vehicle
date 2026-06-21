@@ -336,6 +336,27 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
           )}
         </section>
 
+        {/* Catatan Tambahan (Optional) */}
+        <section className="bg-white rounded-2xl p-4 shadow-sm border border-[#efedf0] flex flex-col gap-2.5">
+          <label htmlFor="additional-notes" className="text-[10px] font-bold text-[#43474d] uppercase tracking-wider ml-1">
+            Catatan Tambahan (Opsional)
+          </label>
+          <div className="relative">
+            <textarea
+              id="additional-notes"
+              value={booking.notes || ''}
+              onChange={(e) => onUpdateBooking({ notes: e.target.value })}
+              placeholder="Contoh: Titip kunci di satpam, bersihkan bagian velg lebih detail, dll."
+              rows={3}
+              maxLength={200}
+              className="w-full bg-[#f5f3f6] border border-[#e3e2e5] rounded-xl p-3 text-xs font-semibold focus:ring-1 focus:ring-[#fdc003] outline-none resize-none text-[#1b1c1e] placeholder-slate-400"
+            />
+            <div className="absolute bottom-2.5 right-3 text-[9px] font-bold text-slate-400">
+              {(booking.notes || '').length}/200
+            </div>
+          </div>
+        </section>
+
         {/* Order Bill Summary */}
         <section className="bg-white rounded-2xl p-5 shadow-lg border border-[#f5f3f6]">
           <h3 className="text-sm font-bold text-[#000f22] mb-4">Ringkasan Pesanan</h3>
