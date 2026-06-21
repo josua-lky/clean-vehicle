@@ -62,6 +62,9 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
       else {
         const userUsageCount = (transactions || []).filter(t => t.promoCode === appliedPromo.code && t.status !== 'Dibatalkan').length;
         const maxUsagePerUser = appliedPromo.max_usage_per_user ?? 1;
+        const hasExceededUserLimit = appliedPromo.has_exceeded_limit !== undefined 
+          ? appliedPromo.has_exceeded_limit 
+          : (userUsageCount >= maxUsagePerUser);
 
         const isNewCustomerPromo = appliedPromo.code.includes('FIRST') || 
                                    (appliedPromo.description && (
@@ -69,11 +72,14 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
                                      appliedPromo.description.toLowerCase().includes('pertama')
                                    ));
         const hasPastOrders = (transactions || []).some(t => t.status !== 'Dibatalkan');
+        const isNotNewCustomer = appliedPromo.is_not_new_customer !== undefined
+          ? appliedPromo.is_not_new_customer
+          : (isNewCustomerPromo && hasPastOrders);
         
-        if (userUsageCount >= maxUsagePerUser) {
+        if (hasExceededUserLimit) {
           isValid = false;
         }
-        else if (isNewCustomerPromo && hasPastOrders) {
+        else if (isNotNewCustomer) {
           isValid = false;
         }
         else if (appliedPromo.max_usage && appliedPromo.used_count >= appliedPromo.max_usage) {

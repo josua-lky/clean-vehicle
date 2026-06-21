@@ -371,34 +371,24 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
                                            ));
 
                 const hasPastOrders = (transactions || []).some(t => t.status !== 'Dibatalkan');
-                const isEligible = !isNewCustomerPromo || !hasPastOrders;
+                const isEligible = promo.is_not_new_customer !== undefined
+                  ? !promo.is_not_new_customer
+                  : (!isNewCustomerPromo || !hasPastOrders);
                 const isUsedMax = promo.max_usage && promo.used_count >= promo.max_usage;
 
                 const userUsageCount = (transactions || []).filter(t => t.promoCode === promo.code && t.status !== 'Dibatalkan').length;
                 const maxUsagePerUser = promo.max_usage_per_user ?? 1;
-                const hasExceededUserLimit = userUsageCount >= maxUsagePerUser;
+                const hasExceededUserLimit = promo.has_exceeded_limit !== undefined
+                  ? promo.has_exceeded_limit
+                  : (userUsageCount >= maxUsagePerUser);
 
-                let buttonLabel = 'Gunakan Promo';
-                let isDisabled = false;
                 let reasonBadge = '';
-
                 if (hasExceededUserLimit) {
-                  buttonLabel = 'Sudah Diklaim';
-                  isDisabled = true;
-                  reasonBadge = 'Sudah Diklaim';
-                } else if (isNewCustomerPromo && hasPastOrders) {
-                  buttonLabel = 'Khusus Pelanggan Baru';
-                  isDisabled = true;
+                  reasonBadge = 'Sudah Digunakan';
+                } else if (!isEligible) {
                   reasonBadge = 'Pelanggan Baru';
                 } else if (isUsedMax) {
-                  buttonLabel = 'Kuota Habis';
-                  isDisabled = true;
                   reasonBadge = 'Kuota Habis';
-                }
-
-                const isCurrentlyApplied = booking.appliedPromoCode === promo.code;
-                if (isCurrentlyApplied) {
-                  buttonLabel = 'Promo Diterapkan';
                 }
 
                 const bgImg = promo.code === 'FIRST30' 
@@ -441,44 +431,31 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
                         {promo.description || 'Diskon spesial untuk pembersihan kendaraan Anda.'}
                       </p>
 
-                      <div className="flex items-center gap-2">
-                        {isDisabled ? (
-                          <button 
-                            disabled
-                            className="bg-slate-700/60 text-slate-400 font-extrabold text-[10px] px-3.5 py-1.5 rounded-lg shrink-0 cursor-not-allowed opacity-60"
-                          >
-                            {buttonLabel}
-                          </button>
-                        ) : isCurrentlyApplied ? (
-                          <button 
-                            onClick={() => {
-                              onUpdateBooking({ appliedPromoCode: null });
-                            }}
-                            className="bg-emerald-600 text-white font-extrabold text-[10px] px-3.5 py-1.5 rounded-lg shrink-0 hover:bg-emerald-700 transition-colors cursor-pointer flex items-center gap-1"
-                          >
-                            <span className="material-symbols-outlined text-[12px] font-bold">check</span>
-                            {buttonLabel}
-                          </button>
+                      <div className="flex items-center gap-2 mt-1">
+                        {hasExceededUserLimit ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/25 border border-red-500/40 text-red-200 font-extrabold text-[10px] uppercase tracking-wider">
+                            <span className="material-symbols-outlined text-[12px]">cancel</span>
+                            Promo sudah digunakan
+                          </div>
+                        ) : !isEligible ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/25 border border-amber-500/40 text-amber-200 font-extrabold text-[10px] uppercase tracking-wider">
+                            <span className="material-symbols-outlined text-[12px]">info</span>
+                            Khusus Pelanggan Baru
+                          </div>
+                        ) : isUsedMax ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-600/35 border border-slate-600/50 text-slate-400 font-extrabold text-[10px] uppercase tracking-wider">
+                            <span className="material-symbols-outlined text-[12px]">lock_clock</span>
+                            Kuota Promo Habis
+                          </div>
                         ) : (
-                          <button 
-                            onClick={() => {
-                              const updates: Partial<BookingState> = {
-                                appliedPromoCode: promo.code
-                              };
-                              if (promo.code === 'FIRST30') {
-                                updates.selectedPackageId = 'detailing';
-                              }
-                              onUpdateBooking(updates);
-                              alert(`Promo ${promo.code} berhasil diterapkan!`);
-                            }}
-                            className="bg-[#fdc003] hover:bg-[#fabd00] text-[#6c5000] font-extrabold text-[10px] px-3.5 py-1.5 rounded-lg shrink-0 active:scale-95 transition-all cursor-pointer"
-                          >
-                            {buttonLabel}
-                          </button>
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/25 border border-emerald-500/40 text-emerald-300 font-extrabold text-[10px] uppercase tracking-wider">
+                            <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                            Promo belum digunakan
+                          </div>
                         )}
                         
                         {promo.expires_at && (
-                          <span className="text-[8px] text-[#768dad] font-bold">
+                          <span className="text-[8px] text-[#768dad] font-bold ml-1">
                             s/d {new Date(promo.expires_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                           </span>
                         )}

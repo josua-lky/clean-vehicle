@@ -4,7 +4,7 @@ import { Transaction } from '../types';
 
 interface HistoryViewProps {
   transactions: Transaction[];
-  onSubmitReview: (id: string, stars: number, text: string) => void;
+  onSubmitReview: (id: string, stars: number, text: string, outletRating?: number) => void;
   onRepeatOrder: (serviceName: string, price: number) => void;
   onNavigate: (tab: 'home' | 'history' | 'alerts' | 'profile') => void;
   userAvatar?: string;
@@ -18,6 +18,7 @@ interface HistoryViewProps {
 export default function HistoryView({ transactions, onSubmitReview, onRepeatOrder, onNavigate, userAvatar, userName, onTrackActiveOrder, hasReviewedPendingToday, unreadCount, initialExpandedId }: HistoryViewProps) {
   const [itemRatings, setItemRatings] = useState<Record<string, number>>({});
   const [itemComments, setItemComments] = useState<Record<string, string>>({});
+  const [itemOutletRatings, setItemOutletRatings] = useState<Record<string, number>>({});
   const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'Semua' | 'Selesai' | 'Dibatalkan'>('Semua');
   const [expandedTxIds, setExpandedTxIds] = useState<Record<string, boolean>>({});
@@ -46,9 +47,15 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
   };
 
   const handleItemReviewSubmit = (itemId: string) => {
+    const item = transactions.find(t => t.id === itemId);
     const starRating = itemRatings[itemId] !== undefined ? itemRatings[itemId] : 5;
     const commentText = itemComments[itemId] || '';
-    onSubmitReview(itemId, starRating, commentText);
+    if (item && item.serviceType === 'outlet') {
+      const outletRating = itemOutletRatings[itemId] !== undefined ? itemOutletRatings[itemId] : 5;
+      onSubmitReview(itemId, starRating, commentText, outletRating);
+    } else {
+      onSubmitReview(itemId, starRating, commentText);
+    }
     setShowConfirmationAlert(true);
     setTimeout(() => {
       setShowConfirmationAlert(false);
@@ -410,26 +417,80 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
                             </div>
                             
                             {/* Rating Selector star system */}
-                            <div className="flex justify-center gap-2">
-                              {[1, 2, 3, 4, 5].map((star) => {
-                                const currentRating = itemRatings[item.id] !== undefined ? itemRatings[item.id] : 5;
-                                const filled = star <= currentRating;
-                                return (
-                                  <button 
-                                    key={star}
-                                    type="button"
-                                    onClick={() => setItemRatings(prev => ({ ...prev, [item.id]: star }))}
-                                    className={`text-4xl select-none cursor-pointer transform hover:scale-110 active:scale-95 transition-all text-[#fdc003] ${
-                                      filled ? 'opacity-100' : 'opacity-30'
-                                    }`}
-                                  >
-                                    <span className="material-symbols-outlined !text-[36px]" style={{ fontVariationSettings: filled ? "'FILL' 1" : "'FILL' 0" }}>
-                                      star
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
+                            {item.serviceType === 'outlet' ? (
+                              <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-bold text-[#43474d] uppercase tracking-wider block text-center">Beri Rating Teknisi</label>
+                                  <div className="flex justify-center gap-2">
+                                    {[1, 2, 3, 4, 5].map((star) => {
+                                      const currentRating = itemRatings[item.id] !== undefined ? itemRatings[item.id] : 5;
+                                      const filled = star <= currentRating;
+                                      return (
+                                        <button 
+                                          key={star}
+                                          type="button"
+                                          onClick={() => setItemRatings(prev => ({ ...prev, [item.id]: star }))}
+                                          className={`text-4xl select-none cursor-pointer transform hover:scale-110 active:scale-95 transition-all text-[#fdc003] ${
+                                            filled ? 'opacity-100' : 'opacity-30'
+                                          }`}
+                                        >
+                                          <span className="material-symbols-outlined !text-[32px]" style={{ fontVariationSettings: filled ? "'FILL' 1" : "'FILL' 0" }}>
+                                            star
+                                          </span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                                  <label className="text-[10px] font-bold text-[#43474d] uppercase tracking-wider block text-center">Beri Rating Outlet</label>
+                                  <div className="flex justify-center gap-2">
+                                    {[1, 2, 3, 4, 5].map((star) => {
+                                      const currentRating = itemOutletRatings[item.id] !== undefined ? itemOutletRatings[item.id] : 5;
+                                      const filled = star <= currentRating;
+                                      return (
+                                        <button 
+                                          key={star}
+                                          type="button"
+                                          onClick={() => setItemOutletRatings(prev => ({ ...prev, [item.id]: star }))}
+                                          className={`text-4xl select-none cursor-pointer transform hover:scale-110 active:scale-95 transition-all text-[#fdc003] ${
+                                            filled ? 'opacity-100' : 'opacity-30'
+                                          }`}
+                                        >
+                                          <span className="material-symbols-outlined !text-[32px]" style={{ fontVariationSettings: filled ? "'FILL' 1" : "'FILL' 0" }}>
+                                            star
+                                          </span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-[#43474d] uppercase tracking-wider block text-center">Beri Rating Teknisi</label>
+                                <div className="flex justify-center gap-2">
+                                  {[1, 2, 3, 4, 5].map((star) => {
+                                    const currentRating = itemRatings[item.id] !== undefined ? itemRatings[item.id] : 5;
+                                    const filled = star <= currentRating;
+                                    return (
+                                      <button 
+                                        key={star}
+                                        type="button"
+                                        onClick={() => setItemRatings(prev => ({ ...prev, [item.id]: star }))}
+                                        className={`text-4xl select-none cursor-pointer transform hover:scale-110 active:scale-95 transition-all text-[#fdc003] ${
+                                          filled ? 'opacity-100' : 'opacity-30'
+                                        }`}
+                                      >
+                                        <span className="material-symbols-outlined !text-[36px]" style={{ fontVariationSettings: filled ? "'FILL' 1" : "'FILL' 0" }}>
+                                          star
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
 
                             {/* Feedback comment box */}
                             <textarea 

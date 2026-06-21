@@ -48,6 +48,9 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
 
   const selectedCar = (cars || []).find(c => String(c.id) === String(booking.selectedCarId));
 
+  const isOutletService = booking.pickupLocation.toLowerCase().includes('outlet') || 
+                          booking.locationName.toLowerCase().includes('outlet');
+
   const priceVal = Number(selectedPkg.price || 0);
 
   // Dynamic Promo Validation and Discount Calculation
@@ -72,6 +75,9 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
       else {
         const userUsageCount = (transactions || []).filter(t => t.promoCode === appliedPromo.code && t.status !== 'Dibatalkan').length;
         const maxUsagePerUser = appliedPromo.max_usage_per_user ?? 1;
+        const hasExceededUserLimit = appliedPromo.has_exceeded_limit !== undefined 
+          ? appliedPromo.has_exceeded_limit 
+          : (userUsageCount >= maxUsagePerUser);
 
         const isNewCustomerPromo = appliedPromo.code.includes('FIRST') || 
                                    (appliedPromo.description && (
@@ -79,11 +85,14 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
                                      appliedPromo.description.toLowerCase().includes('pertama')
                                    ));
         const hasPastOrders = (transactions || []).some(t => t.status !== 'Dibatalkan');
+        const isNotNewCustomer = appliedPromo.is_not_new_customer !== undefined
+          ? appliedPromo.is_not_new_customer
+          : (isNewCustomerPromo && hasPastOrders);
         
-        if (userUsageCount >= maxUsagePerUser) {
-          promoError = 'Anda sudah mengklaim promo ini.';
+        if (hasExceededUserLimit) {
+          promoError = 'Promo sudah digunakan.';
         }
-        else if (isNewCustomerPromo && hasPastOrders) {
+        else if (isNotNewCustomer) {
           promoError = 'Promo ini khusus untuk pemesanan pertama (pelanggan baru).';
         }
         else if (appliedPromo.max_usage && appliedPromo.used_count >= appliedPromo.max_usage) {
@@ -140,22 +149,51 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
           </p>
         </section>
 
+        {/* Emphasis on Service Type */}
+        <div className={`p-4 rounded-2xl border ${
+          isOutletService 
+            ? 'bg-blue-50/50 border-blue-200 text-blue-905' 
+            : 'bg-indigo-50/50 border-indigo-200 text-indigo-905'
+        } space-y-1.5`}>
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-lg">
+              {isOutletService ? 'storefront' : 'home'}
+            </span>
+            <span className="text-xs font-black uppercase tracking-wider">
+              {isOutletService ? 'Layanan Cuci di Tempat / Outlet' : 'Layanan Cuci di Rumah (Home Service)'}
+            </span>
+          </div>
+          <p className="text-[11px] leading-relaxed opacity-90 font-medium">
+            {isOutletService 
+              ? 'Anda akan membawa kendaraan Anda ke outlet kami yang terpilih sesuai jadwal. Teknisi akan menunggu kedatangan Anda dan segera membersihkan kendaraan di lokasi outlet.'
+              : 'Teknisi profesional kami akan datang langsung ke lokasi rumah Anda membawa seluruh peralatan cuci lengkap (termasuk air & listrik mandiri).'
+            }
+          </p>
+        </div>
+
+
         {/* Pick-up location maps panel */}
         <section className="flex flex-col gap-2">
           <div className="flex justify-between items-center px-1">
-            <label className="text-[10px] font-bold text-[#43474d] uppercase tracking-wider">LOKASI PENJEMPUTAN</label>
-            <button 
-              type="button"
-              onClick={() => setShowLocationModal(true)}
-              className="text-[#785900] text-xs font-bold hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[14px]">edit</span> Ubah Lokasi
-            </button>
+            <label className="text-[10px] font-bold text-[#43474d] uppercase tracking-wider">
+              {isOutletService ? 'OUTLET TUJUAN' : 'LOKASI PENJEMPUTAN'}
+            </label>
+            {!isOutletService && (
+              <button 
+                type="button"
+                onClick={() => setShowLocationModal(true)}
+                className="text-[#785900] text-xs font-bold hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[14px]">edit</span> Ubah Lokasi
+              </button>
+            )}
           </div>
           <div 
-            onClick={() => setShowLocationModal(true)}
-            className="relative w-full h-48 rounded-2xl overflow-hidden shadow-sm border border-slate-105 cursor-pointer group active:opacity-95 transition-all"
-            title="Klik untuk mengubah lokasi"
+            onClick={isOutletService ? undefined : () => setShowLocationModal(true)}
+            className={`relative w-full h-48 rounded-2xl overflow-hidden shadow-sm border border-slate-105 group active:opacity-95 transition-all ${
+              isOutletService ? '' : 'cursor-pointer'
+            }`}
+            title={isOutletService ? undefined : 'Klik untuk mengubah lokasi'}
           >
             <img 
               alt="Custom location map" 
@@ -166,13 +204,17 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
               <div className="flex items-center gap-2.5 min-w-0 flex-1">
                 <span className="material-symbols-outlined text-[#785900] shrink-0 animate-pulse text-[18px]">my_location</span>
                 <div className="min-w-0 flex-1">
-                  <span className="text-[8px] text-[#74777e] font-extrabold uppercase tracking-wide block">Wilayah: {booking.locationName || 'Jakarta Selatan'}</span>
+                  <span className="text-[8px] text-[#74777e] font-extrabold uppercase tracking-wide block">
+                    {isOutletService ? 'Outlet' : 'Wilayah'}: {booking.locationName || 'Jakarta Selatan'}
+                  </span>
                   <span className="text-xs font-bold text-[#000f22] block truncate">
                     {booking.pickupLocation || 'Sudirman Central Business District, Jakarta'}
                   </span>
                 </div>
               </div>
-              <span className="material-symbols-outlined text-[#785900] shrink-0 text-sm font-bold bg-[#ffdf9e]/30 p-1.5 rounded-lg">edit</span>
+              {!isOutletService && (
+                <span className="material-symbols-outlined text-[#785900] shrink-0 text-sm font-bold bg-[#ffdf9e]/30 p-1.5 rounded-lg">edit</span>
+              )}
             </div>
           </div>
         </section>
@@ -283,7 +325,9 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
                     {promos.map((promo: any) => {
                       const userUsageCount = (transactions || []).filter(t => t.promoCode === promo.code && t.status !== 'Dibatalkan').length;
                       const maxUsagePerUser = promo.max_usage_per_user ?? 1;
-                      const hasExceededUserLimit = userUsageCount >= maxUsagePerUser;
+                      const hasExceededUserLimit = promo.has_exceeded_limit !== undefined
+                        ? promo.has_exceeded_limit
+                        : (userUsageCount >= maxUsagePerUser);
 
                       const isNewCustomerPromo = promo.code.includes('FIRST') || 
                                                  (promo.description && (
@@ -291,8 +335,9 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
                                                    promo.description.toLowerCase().includes('pertama')
                                                  ));
                       const hasPastOrders = (transactions || []).some(t => t.status !== 'Dibatalkan');
-                      const isUserNewCustomer = !hasPastOrders;
-                      const isEligible = !isNewCustomerPromo || isUserNewCustomer;
+                      const isEligible = promo.is_not_new_customer !== undefined
+                        ? !promo.is_not_new_customer
+                        : (!isNewCustomerPromo || !hasPastOrders);
                       const isUnderMin = promo.min_transaction && priceVal < Number(promo.min_transaction);
                       const isUsedMax = promo.max_usage && promo.used_count >= promo.max_usage;
 
@@ -318,7 +363,7 @@ export default function ConfirmOrderView({ booking, onUpdateBooking, onNext, onB
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="text-[9px] font-black text-slate-700 bg-slate-200 px-1.5 py-0.5 rounded">{promo.code}</span>
                                 {!isEligible && <span className="text-[8px] font-black text-red-655 bg-red-50 px-1 py-0.5 rounded">Pelanggan Baru</span>}
-                                {hasExceededUserLimit && <span className="text-[8px] font-black text-red-655 bg-red-50 px-1 py-0.5 rounded">Sudah Diklaim</span>}
+                                {hasExceededUserLimit && <span className="text-[8px] font-black text-red-655 bg-red-50 px-1 py-0.5 rounded">Promo sudah digunakan</span>}
                                 {isUnderMin && <span className="text-[8px] font-black text-amber-700 bg-amber-50 px-1 py-0.5 rounded">Min. Transaksi</span>}
                               </div>
                               <p className="text-[11px] font-bold text-[#000f22] mt-1 truncate">{promo.name}</p>

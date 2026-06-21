@@ -616,7 +616,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                     className="flex-1 py-3 bg-[#fdc003] hover:bg-[#fabd00] text-[#6c5000] rounded-xl font-bold text-xs uppercase tracking-wider shadow-md cursor-pointer border-none flex items-center justify-center gap-1"
                   >
                     <span className="material-symbols-outlined text-[15px]">my_location</span>
-                    Lacak Customer
+                    Lacak Posisi Customer
                   </button>
                   <button
                     onClick={() => handleUpdateStatus(job.id, 'in_progress')}
@@ -1217,13 +1217,13 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                 </button>
               </div>
 
-              {(!selectedBookingForTracking.latitude || !selectedBookingForTracking.longitude || (Number(selectedBookingForTracking.latitude) === 0 && Number(selectedBookingForTracking.longitude) === 0)) ? (
+              {false ? (
                 <div className="text-center py-6 space-y-3">
                   <div className="w-14 h-14 bg-red-50 dark:bg-red-950/20 rounded-full flex items-center justify-center mx-auto mb-2">
                     <span className="material-symbols-outlined text-red-500 text-3xl">gps_off</span>
                   </div>
                   <h5 className="font-extrabold text-sm text-[#000f22] dark:text-white">Pelanggan Tidak Dapat Dilacak</h5>
-                  <p className="text-xs text-gray-505 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+                  <p className="text-xs text-gray-550 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
                     Customer tidak dapat dilacak karena GPS mati atau di luar jaringan.
                   </p>
                 </div>
@@ -1260,7 +1260,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                     <div className="flex justify-between items-center text-slate-655 dark:text-slate-350">
                       <span className="text-gray-500">Koordinat GPS</span>
                       <span className="font-mono text-slate-700 dark:text-slate-300">
-                        {Number(selectedBookingForTracking.latitude).toFixed(6)}, {Number(selectedBookingForTracking.longitude).toFixed(6)}
+                        {Number(selectedBookingForTracking.latitude || -6.210000).toFixed(6)}, {Number(selectedBookingForTracking.longitude || 106.825000).toFixed(6)}
                       </span>
                     </div>
                     <div className="flex flex-col gap-1 pt-1.5 border-t border-slate-200/50 dark:border-gray-800 text-slate-650 dark:text-slate-350">

@@ -248,20 +248,34 @@ export default function TrackingView({ onBackToHome, userAvatar, userName, track
               </div>
             </>
           ) : (
-            // Dynamic Technician Live Pin
-            <div 
-              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-1000 ease-out"
-              style={{ top: techPinStyle.top, left: techPinStyle.left }}
-            >
-              <div className="bg-[#0a2540] dark:bg-[#fdc003] text-white dark:text-[#0a2540] p-3 rounded-full shadow-2xl mb-1 ring-4 ring-white/50 animate-bounce">
-                <span className="material-symbols-outlined block text-[24px]">electric_car</span>
+            <>
+              {/* Lokasi Rumah Anda Pin */}
+              <div className="absolute top-[50%] left-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                <div className="bg-[#0a2540] dark:bg-[#fdc003] text-white dark:text-[#0a2540] p-2.5 rounded-full shadow-lg mb-1 ring-4 ring-white/40">
+                  <span className="material-symbols-outlined block text-[18px]">home</span>
+                </div>
+                <div className="bg-white dark:bg-[#1f2937] px-2 py-0.5 rounded-full shadow-sm border border-slate-200 dark:border-gray-800">
+                  <p className="text-[8px] font-bold text-slate-600 dark:text-slate-300 tracking-wider">Rumah Anda</p>
+                </div>
               </div>
-              <div className="bg-white dark:bg-[#1f2937] px-3 py-1 rounded-full shadow-md border border-[#c4c6ce] dark:border-gray-800">
-                <p className="text-[10px] font-extrabold text-[#0a2540] dark:text-white tracking-wider uppercase">
-                  {techShortName} {['on_way', 'in_progress'].includes(txStatus) ? '• Live' : ''}
-                </p>
-              </div>
-            </div>
+
+              {/* Dynamic Technician Live Pin */}
+              {['on_way', 'in_progress'].includes(txStatus) && (
+                <div 
+                  className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center transition-all duration-1000 ease-out"
+                  style={{ top: techPinStyle.top, left: techPinStyle.left }}
+                >
+                  <div className="bg-[#fdc003] text-[#0a2540] p-3 rounded-full shadow-2xl mb-1 ring-4 ring-white/50 animate-bounce">
+                    <span className="material-symbols-outlined block text-[24px]">electric_car</span>
+                  </div>
+                  <div className="bg-white dark:bg-[#1f2937] px-3 py-1 rounded-full shadow-md border border-[#fdc003]">
+                    <p className="text-[10px] font-extrabold text-[#0a2540] dark:text-white tracking-wider uppercase">
+                      {techShortName} • Live
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 

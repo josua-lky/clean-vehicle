@@ -911,10 +911,11 @@ export default function App() {
     }
   };
 
-  const handleReviewSubmission = async (id: string, stars: number, text: string) => {
+  const handleReviewSubmission = async (id: string, stars: number, text: string, outletRating?: number) => {
     try {
       await api.post(`/bookings/${id}/review`, {
         rating: stars,
+        outlet_rating: outletRating,
         comment: text
       });
       await fetchBookings();
@@ -1279,7 +1280,7 @@ export default function App() {
               paymentMethod={paymentDetails.method}
               onLacak={() => navigateTo('tracking')}
               onHome={() => navigateTo('dashboard')}
-              serviceType={booking.pickupLocation.toLowerCase().includes('outlet') ? 'outlet' : 'home'}
+              serviceType={(booking.pickupLocation.toLowerCase().includes('outlet') || booking.locationName.toLowerCase().includes('outlet')) ? 'outlet' : 'home'}
             />
           </motion.div>
         )}
