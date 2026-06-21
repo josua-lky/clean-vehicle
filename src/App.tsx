@@ -1,4 +1,4 @@
-import api from './services/api';
+import api, { getStorageUrl } from './services/api';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookingState, Transaction, Car, NotificationItem } from './types';
@@ -295,24 +295,6 @@ export default function App() {
 
   // Authenticated state
   const [user, setUser] = useState<any>(null);
-  const getStorageUrl = (path?: string) => {
-    if (!path) return '';
-    if (path.startsWith('data:image/')) return path;
-    
-    let relativePath = path;
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      const isStorageFile = path.includes('/storage-file/');
-      const parts = path.split(isStorageFile ? '/storage-file/' : '/storage/');
-      if (parts.length > 1) {
-        relativePath = parts[1];
-      } else {
-        return path;
-      }
-    }
-    
-    const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, '') : 'http://127.0.0.1:8000';
-    return `${baseUrl}/storage-file/${relativePath}`;
-  };
 
   const getAvatarUrl = () => {
     if (!user) return 'https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17';
@@ -1273,6 +1255,7 @@ export default function App() {
                 else if (tab === 'profile') navigateTo('profile');
               }}
               userAvatar={avatarUrl}
+              userName={user?.name}
               onTrackActiveOrder={(orderId) => {
                 setActiveTrackedOrderId(orderId);
                 navigateTo('tracking');

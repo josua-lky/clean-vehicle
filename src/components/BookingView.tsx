@@ -1,27 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { BookingState, Car } from '../types';
-import api from '../services/api';
+import api, { getStorageUrl } from '../services/api';
 import LocationModal from './LocationModal';
 
-const getStorageUrl = (path?: string) => {
-  if (!path) return '';
-  if (path.startsWith('data:image/')) return path;
-  
-  let relativePath = path;
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    const isStorageFile = path.includes('/storage-file/');
-    const parts = path.split(isStorageFile ? '/storage-file/' : '/storage/');
-    if (parts.length > 1) {
-      relativePath = parts[1];
-    } else {
-      return path;
-    }
-  }
-  
-  const baseUrl = api.defaults.baseURL ? api.defaults.baseURL.replace(/\/api$/, '') : 'http://127.0.0.1:8000';
-  return `${baseUrl}/storage-file/${relativePath}`;
-};
 
 interface BookingViewProps {
   booking: BookingState;

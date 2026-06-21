@@ -8,13 +8,14 @@ interface HistoryViewProps {
   onRepeatOrder: (serviceName: string, price: number) => void;
   onNavigate: (tab: 'home' | 'history' | 'alerts' | 'profile') => void;
   userAvatar?: string;
+  userName?: string;
   onTrackActiveOrder?: (orderId: string) => void;
   hasReviewedPendingToday?: boolean;
   unreadCount: number;
   initialExpandedId?: string;
 }
 
-export default function HistoryView({ transactions, onSubmitReview, onRepeatOrder, onNavigate, userAvatar, onTrackActiveOrder, hasReviewedPendingToday, unreadCount, initialExpandedId }: HistoryViewProps) {
+export default function HistoryView({ transactions, onSubmitReview, onRepeatOrder, onNavigate, userAvatar, userName, onTrackActiveOrder, hasReviewedPendingToday, unreadCount, initialExpandedId }: HistoryViewProps) {
   const [itemRatings, setItemRatings] = useState<Record<string, number>>({});
   const [itemComments, setItemComments] = useState<Record<string, string>>({});
   const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
@@ -66,9 +67,12 @@ export default function HistoryView({ transactions, onSubmitReview, onRepeatOrde
             title="Profil Saya"
           >
             <img 
-              alt="User Headshot" 
+              alt="User profile avatar" 
               className="w-full h-full object-cover" 
-              src={userAvatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuD90iPn_p56sjSnZ0vwHyoBd07vLcuHPcArqDh3m0ku8XqdOGUw9z_TbF0kT98dV1a53CTJkoeIOLRvq7aGrNfLNNFB-zx15LDNCyiCYN_0Id64yu7zV3LnE0DNHCcnbGzTmpBXjNyLLOfVftyfkZh3rJmcIU-SzCnCriVti9GeG2LKndKXQ49v6J9VZP9MevH_EuxpjkmxOgfXDYAYFZHWmQ--x3CTM_hrjQwmK53ZULDCtkRwPH1sU4e9eGMSaXQYmKPJkzj9q_17"}
+              src={userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'User')}&background=1B2337&color=F0C419`}
+              onError={(e) => {
+                e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'User')}&background=1B2337&color=F0C419`;
+              }}
             />
           </div>
 
