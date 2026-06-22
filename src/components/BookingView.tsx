@@ -44,23 +44,38 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
   }, [matchingCars, selectedCar]);
 
   const mappedOutlets = useMemo(() => {
-    return outlets.map((o: any) => ({
-      id: String(o.id),
-      name: o.name,
-      address: o.address,
-      rating: Number(o.rating) > 0 ? Number(o.rating).toFixed(1) : '4.5',
-      reviewsCount: o.reviews_count !== undefined ? o.reviews_count : 0,
-      status: `Buka • ${o.open_time.substring(0, 5)} - ${o.close_time.substring(0, 5)}`,
-      distance: `${(Math.random() * 5 + 1).toFixed(1)} km`,
-      image: o.photo || (o.name.includes('Pusat') 
-        ? 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&q=80&w=256'
-        : o.name.includes('Bekasi')
-          ? 'https://images.unsplash.com/photo-1605152276897-4f618f7323a4?auto=format&fit=crop&q=80&w=256'
-          : 'https://images.unsplash.com/photo-1552930294-6b595f4c2974?auto=format&fit=crop&q=80&w=256'),
-      features: o.name.includes('Pusat') 
-        ? ['CUCI EKSPRES', 'COATING', 'RUANG TUNGGU AC'] 
-        : ['DETAILING', 'WAX KILAT', 'LIFT HIDROLIK']
-    }));
+    return outlets.map((o: any) => {
+      const now = new Date();
+      const curHour = now.getHours();
+      const curMin = now.getMinutes();
+      const [openH, openM] = (o.open_time || '07:00').split(':').map(Number);
+      const [closeH, closeM] = (o.close_time || '20:00').split(':').map(Number);
+      
+      const isClosedNow = (curHour > closeH || (curHour === closeH && curMin >= closeM)) ||
+                          (curHour < openH || (curHour === openH && curMin < openM)) ||
+                          (o.status !== 'active');
+
+      return {
+        id: String(o.id),
+        name: o.name,
+        address: o.address,
+        rating: Number(o.rating) > 0 ? Number(o.rating).toFixed(1) : '4.5',
+        reviewsCount: o.reviews_count !== undefined ? o.reviews_count : 0,
+        status: isClosedNow 
+          ? `Tutup • Buka ${o.open_time.substring(0, 5)} - ${o.close_time.substring(0, 5)}`
+          : `Buka • ${o.open_time.substring(0, 5)} - ${o.close_time.substring(0, 5)}`,
+        isClosed: isClosedNow,
+        distance: `${(Math.random() * 5 + 1).toFixed(1)} km`,
+        image: o.photo || (o.name.includes('Pusat') 
+          ? 'https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&q=80&w=256'
+          : o.name.includes('Bekasi')
+            ? 'https://images.unsplash.com/photo-1605152276897-4f618f7323a4?auto=format&fit=crop&q=80&w=256'
+            : 'https://images.unsplash.com/photo-1552930294-6b595f4c2974?auto=format&fit=crop&q=80&w=256'),
+        features: o.name.includes('Pusat') 
+          ? ['CUCI EKSPRES', 'COATING', 'RUANG TUNGGU AC'] 
+          : ['DETAILING', 'WAX KILAT', 'LIFT HIDROLIK']
+      };
+    });
   }, [outlets]);
 
   const [selectedOutletId, setSelectedOutletId] = useState<string>(() => {
@@ -79,7 +94,7 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
       specialties: t.specialization ? [t.specialization === 'motor' ? 'Motor' : 'Mobil', t.area || 'All Rounder'] : ['Pembersihan', 'Detil Luar'],
       specialization: t.specialization,
       outletId: t.outlet_id ? String(t.outlet_id) : null,
-      status: t.status === 'active' ? 'Tersedia' : 'Sibuk',
+      status: t.status === 'inactive' ? 'Nonaktif' : 'Tersedia',
       rawBookings: t.bookings || []
     }));
   }, [technicians]);
@@ -114,6 +129,10 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
 
 
 
+  const selectedOutlet = useMemo(() => {
+    return outlets.find((o: any) => String(o.id) === selectedOutletId);
+  }, [outlets, selectedOutletId]);
+
   // Generate date options dynamically
   const dateOptions = useMemo(() => {
     const daysAbbrIndo = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -128,6 +147,13 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
     const curHour = nowObj.getHours();
     const curMin = nowObj.getMinutes();
     
+    const defaultOpen = '07:00';
+    const defaultClose = '20:00';
+    const openTime = selectedOutlet?.open_time || defaultOpen;
+    const closeTime = selectedOutlet?.close_time || defaultClose;
+    const [openH, openM] = openTime.split(':').map(Number);
+    const [closeH, closeM] = closeTime.split(':').map(Number);
+
     for (let i = 0; i < 4; i++) {
       const d = new Date();
       d.setDate(d.getDate() + i);
@@ -141,10 +167,13 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
       
       let isDisabled = false;
       if (i === 0) {
-        // Check if there are any slots left today
+        // Check if there are any slots left today (must be in future, and within open/close hours)
         const futureSlots = allTimesToCheck.filter(t => {
           const [sh, sm] = t.split(':').map(Number);
-          return sh > curHour || (sh === curHour && sm > curMin);
+          const isAfterOpen = sh > openH || (sh === openH && sm >= openM);
+          const isBeforeClose = sh < closeH || (sh === closeH && sm <= closeM);
+          const isFuture = sh > curHour || (sh === curHour && sm > curMin);
+          return isAfterOpen && isBeforeClose && isFuture;
         });
         if (futureSlots.length === 0) {
           isDisabled = true;
@@ -163,7 +192,7 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
       });
     }
     return options;
-  }, []);
+  }, [selectedOutlet]);
 
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     if (booking.selectedDate && booking.selectedDate !== '2026-06-18') {
@@ -178,10 +207,14 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
   const allTimes = useMemo(() => [...baseTimes, ...extraTimes].sort((a, b) => a.localeCompare(b)), [baseTimes, extraTimes]);
 
   const getFilteredTimes = (timesArray: string[], targetDateStr: string) => {
+    const defaultOpen = '07:00';
+    const defaultClose = '20:00';
+    const openTime = selectedOutlet?.open_time || defaultOpen;
+    const closeTime = selectedOutlet?.close_time || defaultClose;
+    const [openH, openM] = openTime.split(':').map(Number);
+    const [closeH, closeM] = closeTime.split(':').map(Number);
+
     const isSelectedDateToday = dateOptions.find(o => o.id === targetDateStr)?.isToday;
-    if (!isSelectedDateToday) {
-      return timesArray;
-    }
     
     const nowObj = new Date();
     const curHour = nowObj.getHours();
@@ -189,7 +222,16 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
     
     return timesArray.filter(t => {
       const [sh, sm] = t.split(':').map(Number);
-      return sh > curHour || (sh === curHour && sm > curMin);
+      
+      const isWithinHours = (sh > openH || (sh === openH && sm >= openM)) &&
+                            (sh < closeH || (sh === closeH && sm <= closeM));
+      if (!isWithinHours) return false;
+
+      if (isSelectedDateToday) {
+        return sh > curHour || (sh === curHour && sm > curMin);
+      }
+      
+      return true;
     });
   };
 
@@ -466,7 +508,13 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
                           <span className="text-emerald-700 text-[10px] font-extrabold ml-2 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0">{outlet.distance}</span>
                         </div>
                       </div>
-                      <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded text-[9px] font-bold shrink-0">BUKA</span>
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold shrink-0 ${
+                        outlet.isClosed
+                          ? 'bg-red-50 text-red-800 border border-red-200'
+                          : 'bg-emerald-50 text-emerald-800'
+                      }`}>
+                        {outlet.isClosed ? 'TUTUP' : 'BUKA'}
+                      </span>
                     </div>
                     <div className="mt-2.5 flex gap-1.5 flex-wrap">
                       {outlet.features.map(feat => (
@@ -606,6 +654,14 @@ export default function BookingView({ booking, onUpdateBooking, onNext, onBack, 
                           {isBusy ? 'Sudah Ada Booking' : tech.status}
                         </span>
                       </div>
+                      
+                      {isBusy && (
+                        <div className="mt-2 text-amber-700 text-[11px] font-bold bg-amber-50/50 border border-amber-200/50 rounded-lg p-2 flex items-start gap-1.5 leading-relaxed">
+                          <span className="material-symbols-outlined text-sm shrink-0 mt-0.5">info</span>
+                          <span>Sudah ada yang booking, silahkan memilih di jam berikutnya atau teknisi yang lain.</span>
+                        </div>
+                      )}
+
                       <div className="mt-2 flex gap-1.5 flex-wrap">
                         {tech.specialties.map((spec: string) => (
                           <span key={spec} className="px-2 py-0.5 bg-[#f5f3f6] rounded-full text-[9px] font-bold text-[#74777e] border border-[#e3e2e5]">
