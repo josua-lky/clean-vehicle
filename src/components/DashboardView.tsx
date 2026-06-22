@@ -274,6 +274,25 @@ export default function DashboardView({ darkMode, onToggleTheme, userName, userA
 
       <main className="max-w-screen-md mx-auto pt-4 px-5">
         
+        {/* User Greeting Block */}
+        <section className="mb-5 mt-1 flex items-center justify-between">
+          <div className="space-y-1">
+            <h2 className="text-xl font-extrabold text-[#000f22] dark:text-white tracking-tight flex items-center gap-1.5 animate-fade-in">
+              Halo, <span className="text-[#785900] dark:text-[#fdc003]">{userName}</span>
+              <motion.span 
+                animate={{ rotate: [0, 15, -10, 15, 0] }}
+                transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 3 }}
+                className="inline-block"
+              >
+                👋
+              </motion.span>
+            </h2>
+            <p className="text-[11px] font-bold text-[#74777e] dark:text-slate-400 uppercase tracking-wider">
+              Selamat datang kembali! Yuk rawat kendaraan Anda hari ini.
+            </p>
+          </div>
+        </section>
+
         {/* OnoPay E-Wallet Card */}
         <section className="mb-6">
           <div className="bg-gradient-to-r from-[#0a2540] via-[#103054] to-[#0a2540] rounded-2xl p-5 text-white relative overflow-hidden shadow-md border border-white/5">

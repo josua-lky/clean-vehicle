@@ -44,6 +44,15 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
     const saved = localStorage.getItem(`tech_alerts_${technician?.id || 'default'}`);
     return saved ? JSON.parse(saved) : [];
   });
+  const [deletedAlertIds, setDeletedAlertIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem(`tech_deleted_alerts_${technician?.id || 'default'}`);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const deletedAlertIdsRef = useRef<string[]>(deletedAlertIds);
+  useEffect(() => {
+    deletedAlertIdsRef.current = deletedAlertIds;
+  }, [deletedAlertIds]);
   const [activeToast, setActiveToast] = useState<{ title: string; description: string } | null>(null);
   const prevBookingsRef = useRef<any[]>([]);
 
@@ -101,6 +110,7 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
   }, [activeToast]);
 
   const addTechnicianNotification = (id: string, title: string, description: string, bookingCode: string) => {
+    if (deletedAlertIdsRef.current.includes(id)) return;
     setAlerts(prev => {
       if (prev.some(a => a.id === id)) return prev;
       const newAlert = {
@@ -794,9 +804,14 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                   <span class="text-xs text-gray-300 dark:text-gray-700">|</span>
                   <button 
                     onClick={() => {
-                      if (window.confirm('Hapus semua riwayat notifikasi?')) {
+                      if (window.confirm('Apakah Anda yakin ingin menghapus semua notifikasi?')) {
+                        const allIds = alerts.map(a => a.id);
                         setAlerts([]);
                         localStorage.removeItem(`tech_alerts_${technician?.id || 'default'}`);
+                        
+                        const newDeleted = Array.from(new Set([...deletedAlertIds, ...allIds]));
+                        setDeletedAlertIds(newDeleted);
+                        localStorage.setItem(`tech_deleted_alerts_${technician?.id || 'default'}`, JSON.stringify(newDeleted));
                       }
                     }}
                     className="text-xs text-red-600 dark:text-red-400 font-bold bg-transparent border-none cursor-pointer hover:underline"
@@ -846,6 +861,10 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
                         const updated = alerts.filter(a => a.id !== item.id);
                         setAlerts(updated);
                         localStorage.setItem(`tech_alerts_${technician?.id || 'default'}`, JSON.stringify(updated));
+                        
+                        const newDeleted = [...deletedAlertIds, item.id];
+                        setDeletedAlertIds(newDeleted);
+                        localStorage.setItem(`tech_deleted_alerts_${technician?.id || 'default'}`, JSON.stringify(newDeleted));
                       }}
                       title="Hapus"
                       className="absolute right-4 top-4 text-gray-400 dark:text-slate-500 hover:text-red-500 p-0.5 rounded transition-colors"

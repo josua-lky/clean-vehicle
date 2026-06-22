@@ -1,5 +1,5 @@
 import api, { getStorageUrl } from './services/api';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookingState, Transaction, Car, NotificationItem } from './types';
 import WelcomeView from './components/WelcomeView';
@@ -378,6 +378,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const deletedNotifIdsRef = useRef<string[]>(deletedNotifIds);
+  useEffect(() => {
+    deletedNotifIdsRef.current = deletedNotifIds;
+  }, [deletedNotifIds]);
+
   const formatNotifTime = (dateStr: string) => {
     if (!dateStr) return 'Baru Saja';
     try {
@@ -609,7 +614,7 @@ export default function App() {
       derivedNotifs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
       // Filter out deleted notifications
-      const activeNotifs = derivedNotifs.filter(n => !deletedNotifIds.includes(n.id));
+      const activeNotifs = derivedNotifs.filter(n => !deletedNotifIdsRef.current.includes(n.id));
 
       setNotifications(prev => {
         if (prev.length > 0) {
@@ -1000,7 +1005,7 @@ export default function App() {
   }, []);
 
   const handleClearNotifications = () => {
-    if (window.confirm('Hapus semua riwayat notifikasi?')) {
+    if (window.confirm('Apakah Anda yakin ingin menghapus semua notifikasi?')) {
       const allIds = notifications.map(n => n.id);
       const updated = Array.from(new Set([...deletedNotifIds, ...allIds]));
       setDeletedNotifIds(updated);

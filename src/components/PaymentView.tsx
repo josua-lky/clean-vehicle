@@ -16,13 +16,8 @@ interface PaymentViewProps {
 
 export default function PaymentView({ booking, onPaymentSuccess, onBack, userAvatar, userPhone, packages, promos = [], transactions = [] }: PaymentViewProps) {
   const [phoneInput, setPhoneInput] = useState<string>(userPhone || '081234000001');
-  const [step, setStep] = useState<'input' | 'qr'>('input');
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  
-  // States to hold OnoPay API data
-  const [onoUser, setOnoUser] = useState<any | null>(null);
-  const [qrData, setQrData] = useState<any | null>(null);
 
   const [seconds, setSeconds] = useState(899); // 14 mins 59 secs
 
@@ -133,8 +128,8 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
     return clean;
   };
 
-  // Step 1: Check User, Check Balance, Generate QR
-  const handleProceedToQR = async (e: React.FormEvent) => {
+  // Direct payment handler
+  const handleDirectPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phoneInput.trim()) {
       setErrorMsg('Masukkan nomor telepon OnoPay Anda.');
@@ -155,7 +150,7 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
 
       let checkUserData = await checkUserRes.json();
 
-      // Auto-register if user is not found (status 404 or message is 'User tidak ditemukan')
+      // Auto-register if user is not found
       if (
         !checkUserRes.ok && 
         (checkUserRes.status === 404 || (checkUserData && checkUserData.message === 'User tidak ditemukan'))
@@ -196,17 +191,12 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
       }
 
       const balance = Number(checkBalData.data.balance);
-      setOnoUser({
-        name: checkUserData.data.name,
-        email: checkUserData.data.email,
-        balance: balance
-      });
 
       if (balance < totalBill) {
         throw new Error(`Saldo OnoPay Anda tidak cukup untuk membayar tagihan ini. Sisa Saldo: Rp ${balance.toLocaleString('id-ID')}. Silakan lakukan Top Up di https://onopay.web.id/`);
       }
 
-      // 3. Generate QR Code
+      // 3. Generate QR Code (hidden from user)
       const genQrRes = await fetch('https://onopay.web.id/api/v1/payment/qr/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -221,33 +211,16 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
 
       const genQrData = await genQrRes.json();
       if (!genQrRes.ok || !genQrData.success) {
-        throw new Error(genQrData.message || 'Gagal generate QR Code dari OnoPay.');
+        throw new Error(genQrData.message || 'Gagal memproses transaksi OnoPay (QR Generation failed).');
       }
 
-      setQrData(genQrData.data);
-      setStep('qr');
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || 'Terjadi kesalahan koneksi ke server OnoPay.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 2: Pay QR Code Transaction
-  const handlePayViaOnoPay = async () => {
-    if (!qrData) return;
-
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
+      // 4. Pay QR Code Transaction
       const payRes = await fetch('https://onopay.web.id/api/v1/payment/qr/pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({
-          qr_code: qrData.qr_code,
-          payer_phone: phoneInput.trim()
+          qr_code: genQrData.data.qr_code,
+          payer_phone: cleanPhone
         })
       });
 
@@ -257,7 +230,7 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
       }
 
       // Payment success! Proceed to parent success screen
-      onPaymentSuccess(totalBill, `OnoPay Gateway (No. ${phoneInput})`);
+      onPaymentSuccess(totalBill, `OnoPay Gateway (No. ${cleanPhone})`);
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || 'Proses pembayaran gagal.');
@@ -344,155 +317,70 @@ export default function PaymentView({ booking, onPaymentSuccess, onBack, userAva
           </div>
         </section>
 
-        {/* OnoPay Form or QR Step */}
-        {step === 'input' ? (
-          <motion.section 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-[#0a2540]">OnoPay Payment Gateway</h3>
-              <span className="text-[9px] font-bold text-white bg-[#0066cc] px-2 py-0.5 rounded tracking-widest uppercase shadow">
-                OnoPay API
-              </span>
+        {/* OnoPay Form */}
+        <motion.section 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-bold text-[#0a2540]">OnoPay Payment Gateway</h3>
+            <span className="text-[9px] font-bold text-white bg-[#0066cc] px-2 py-0.5 rounded tracking-widest uppercase shadow">
+              OnoPay API
+            </span>
+          </div>
+
+          <form onSubmit={handleDirectPayment} className="bg-white rounded-xl p-5 border border-[#efedf0] shadow-sm space-y-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-xl bg-[#e6f2ff] flex items-center justify-center text-[#0066cc]">
+                <span className="material-symbols-outlined">account_balance_wallet</span>
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-[#0a2540]">Bayar Menggunakan Saldo OnoPay</h4>
+                <p className="text-[10px] text-[#74777e]">Autentikasi instan menggunakan nomor telepon Anda</p>
+              </div>
             </div>
 
-            <form onSubmit={handleProceedToQR} className="bg-white rounded-xl p-5 border border-[#efedf0] shadow-sm space-y-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="h-10 w-10 rounded-xl bg-[#e6f2ff] flex items-center justify-center text-[#0066cc]">
-                  <span className="material-symbols-outlined">account_balance_wallet</span>
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-[#0a2540]">Bayar Menggunakan Saldo OnoPay</h4>
-                  <p className="text-[10px] text-[#74777e]">Autentikasi instan menggunakan nomor telepon Anda</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-extrabold text-[#74777e] uppercase tracking-wider">
-                  Nomor Telepon OnoPay Anda
-                </label>
-                <input 
-                  type="text" 
-                  value={phoneInput}
-                  onChange={(e) => setPhoneInput(e.target.value)}
-                  placeholder="Contoh: 081234000001"
-                  className="bg-[#f5f3f6] border border-[#e3e2e5] rounded-xl px-3.5 py-3 text-sm font-semibold focus:ring-2 focus:ring-[#0066cc] focus:border-transparent outline-none w-full"
-                  disabled={loading}
-                  required
-                />
-              </div>
-
-              {errorMsg && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-medium leading-relaxed">
-                  <span className="font-bold">Error:</span> {errorMsg}
-                </div>
-              )}
-
-              <button 
-                type="submit"
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-extrabold text-[#74777e] uppercase tracking-wider">
+                Nomor Telepon OnoPay Anda
+              </label>
+              <input 
+                type="text" 
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                placeholder="Contoh: 081234000001"
+                className="bg-[#f5f3f6] border border-[#e3e2e5] rounded-xl px-3.5 py-3 text-sm font-semibold focus:ring-2 focus:ring-[#0066cc] focus:border-transparent outline-none w-full"
                 disabled={loading}
-                className="w-full py-3.5 bg-[#0066cc] hover:bg-[#003d7a] text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                    <span>Memproses...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Konfirmasi & Dapatkan QR</span>
-                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                  </>
-                )}
-              </button>
-            </form>
-          </motion.section>
-        ) : (
-          <motion.section 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-[#0a2540]">Scan & Konfirmasi Pembayaran</h3>
-              <button 
-                onClick={() => setStep('input')}
-                disabled={loading}
-                className="text-xs text-[#0066cc] font-bold hover:underline"
-              >
-                Ubah Akun
-              </button>
+                required
+              />
             </div>
 
-            <div className="bg-white rounded-xl p-5 border border-[#efedf0] shadow-sm space-y-5 text-center">
-              
-              {/* OnoPay User Profile Badge */}
-              {onoUser && (
-                <div className="bg-[#e6f2ff] rounded-xl p-3 flex items-center justify-between text-left border border-[#b3d7ff]">
-                  <div className="flex items-center gap-2.5">
-                    <span className="material-symbols-outlined text-[#0066cc]">person</span>
-                    <div>
-                      <p className="text-xs font-bold text-[#0a2540]">{onoUser.name}</p>
-                      <p className="text-[10px] text-[#74777e]">{onoUser.email}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[8px] font-bold text-[#74777e] uppercase tracking-wider">SALDO ONOPAY</p>
-                    <p className="text-xs font-extrabold text-[#0066cc]">Rp {onoUser.balance.toLocaleString('id-ID')}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* QR Image */}
-              {qrData && (
-                <div className="flex flex-col items-center space-y-2">
-                  <div className="p-3 bg-white border border-[#dee2e6] rounded-2xl shadow-inner inline-block">
-                    <img 
-                      src={qrData.qr_image} 
-                      alt="OnoPay QR Code" 
-                      className="w-48 h-48 object-contain"
-                    />
-                  </div>
-                  <p className="text-[10px] text-[#74777e] font-semibold uppercase tracking-wider">
-                    QR CODE: {qrData.qr_code}
-                  </p>
-                </div>
-              )}
-
-              {errorMsg && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-medium text-left leading-relaxed">
-                  <span className="font-bold">Error:</span> {errorMsg}
-                </div>
-              )}
-
-              <div className="space-y-2 pt-2">
-                <button 
-                  onClick={handlePayViaOnoPay}
-                  disabled={loading}
-                  className="w-full py-4 bg-[#28a745] hover:bg-[#218838] text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
-                      <span>Sedang Memproses Transaksi...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-sm">check_circle</span>
-                      <span>Bayar Sekarang (Simulasi Scan)</span>
-                    </>
-                  )}
-                </button>
-                <p className="text-[9px] text-[#74777e] leading-relaxed px-4">
-                  Dengan mengklik bayar sekarang, Anda menyetujui pemotongan saldo OnoPay secara langsung & real-time.
-                </p>
+            {errorMsg && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs font-medium leading-relaxed">
+                <span className="font-bold">Error:</span> {errorMsg}
               </div>
+            )}
 
-            </div>
-          </motion.section>
-        )}
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 bg-[#0066cc] hover:bg-[#003d7a] text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-md active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                  <span>Memproses...</span>
+                </>
+              ) : (
+                <>
+                  <span>Konfirmasi & Bayar Sekarang</span>
+                  <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                </>
+              )}
+            </button>
+          </form>
+        </motion.section>
 
       </main>
     </div>
