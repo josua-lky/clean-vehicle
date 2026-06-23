@@ -18,21 +18,106 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
   const [refreshing, setRefreshing] = useState(false);
 
   // Chat state
-  const [selectedBookingForChat, setSelectedBookingForChat] = useState<any | null>(null);
+  const [selectedBookingForChat, _setSelectedBookingForChat] = useState<any | null>(null);
+  const setSelectedBookingForChat = (job: any | null) => {
+    if (job) {
+      _setSelectedBookingForChat(job);
+      window.history.pushState({ screen: 'technician-home', subview: 'chat', job_id: job.id }, '', `#/technician-home/chat`);
+    } else {
+      if (window.history.state && window.history.state.subview === 'chat') {
+        window.history.back();
+      } else {
+        _setSelectedBookingForChat(null);
+      }
+    }
+  };
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [newMsg, setNewMsg] = useState('');
   const [pollingChat, setPollingChat] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   // Camera upload state for completion (both before/after photos)
-  const [selectedBookingForPhoto, setSelectedBookingForPhoto] = useState<any | null>(null);
+  const [selectedBookingForPhoto, _setSelectedBookingForPhoto] = useState<any | null>(null);
+  const setSelectedBookingForPhoto = (booking: any | null) => {
+    if (booking) {
+      _setSelectedBookingForPhoto(booking);
+      window.history.pushState({ screen: 'technician-home', subview: 'photo', booking_id: booking.id }, '', `#/technician-home/photo`);
+    } else {
+      if (window.history.state && window.history.state.subview === 'photo') {
+        window.history.back();
+      } else {
+        _setSelectedBookingForPhoto(null);
+      }
+    }
+  };
   const [photoUploadMode, setPhotoUploadMode] = useState<'before' | 'after' | null>(null);
   const [beforePhotoFile, setBeforePhotoFile] = useState<File | null>(null);
   const [beforePhotoPreview, setBeforePhotoPreview] = useState<string | null>(null);
   const [afterPhotoFile, setAfterPhotoFile] = useState<File | null>(null);
   const [afterPhotoPreview, setAfterPhotoPreview] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [selectedBookingForTracking, setSelectedBookingForTracking] = useState<any | null>(null);
+  
+  const [selectedBookingForTracking, _setSelectedBookingForTracking] = useState<any | null>(null);
+  const setSelectedBookingForTracking = (job: any | null) => {
+    if (job) {
+      _setSelectedBookingForTracking(job);
+      window.history.pushState({ screen: 'technician-home', subview: 'tracking', job_id: job.id }, '', `#/technician-home/tracking`);
+    } else {
+      if (window.history.state && window.history.state.subview === 'tracking') {
+        window.history.back();
+      } else {
+        _setSelectedBookingForTracking(null);
+      }
+    }
+  };
+
+  // Listen to popstate for technician subview navigation support
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.screen === 'technician-home') {
+        const sub = event.state.subview;
+        if (sub === 'chat') {
+          const job = bookings.find(b => b.id === event.state.job_id) || selectedBookingForChat;
+          _setSelectedBookingForChat(job);
+          _setSelectedBookingForPhoto(null);
+          _setSelectedBookingForTracking(null);
+          _setShowEditProfileModal(false);
+        } else if (sub === 'photo') {
+          const booking = bookings.find(b => b.id === event.state.booking_id) || selectedBookingForPhoto;
+          _setSelectedBookingForChat(null);
+          _setSelectedBookingForPhoto(booking);
+          _setSelectedBookingForTracking(null);
+          _setShowEditProfileModal(false);
+        } else if (sub === 'tracking') {
+          const job = bookings.find(b => b.id === event.state.job_id) || selectedBookingForTracking;
+          _setSelectedBookingForChat(null);
+          _setSelectedBookingForPhoto(null);
+          _setSelectedBookingForTracking(job);
+          _setShowEditProfileModal(false);
+        } else if (sub === 'edit-profile') {
+          _setSelectedBookingForChat(null);
+          _setSelectedBookingForPhoto(null);
+          _setSelectedBookingForTracking(null);
+          _setShowEditProfileModal(true);
+        } else {
+          _setSelectedBookingForChat(null);
+          _setSelectedBookingForPhoto(null);
+          _setSelectedBookingForTracking(null);
+          _setShowEditProfileModal(false);
+        }
+      } else {
+        _setSelectedBookingForChat(null);
+        _setSelectedBookingForPhoto(null);
+        _setSelectedBookingForTracking(null);
+        _setShowEditProfileModal(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [bookings, selectedBookingForChat, selectedBookingForPhoto, selectedBookingForTracking]);
 
   // Simulated GPS state
   const [currentLat, setCurrentLat] = useState(-6.200000);
@@ -57,7 +142,19 @@ export default function TechnicianHomeView({ darkMode, onToggleTheme, technician
   const prevBookingsRef = useRef<any[]>([]);
 
   // Edit Profile States
-  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showEditProfileModal, _setShowEditProfileModal] = useState(false);
+  const setShowEditProfileModal = (val: boolean) => {
+    if (val) {
+      _setShowEditProfileModal(true);
+      window.history.pushState({ screen: 'technician-home', subview: 'edit-profile' }, '', `#/technician-home/edit-profile`);
+    } else {
+      if (window.history.state && window.history.state.subview === 'edit-profile') {
+        window.history.back();
+      } else {
+        _setShowEditProfileModal(false);
+      }
+    }
+  };
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [editName, setEditName] = useState(technician?.name || '');
   const [editAvatar, setEditAvatar] = useState(technician?.avatar || technician?.profile_photo || '');

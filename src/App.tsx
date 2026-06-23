@@ -325,6 +325,16 @@ export default function App() {
     if (screen !== 'history') {
       setInitialExpandedBookingId(undefined);
     }
+
+    // HTML5 History API integration for back button support
+    const isEntryScreen = ['welcome', 'login', 'dashboard', 'technician-home'].includes(screen);
+    if (isEntryScreen) {
+      window.history.replaceState({ screen }, '', `#/${screen}`);
+    } else {
+      if (!window.history.state || window.history.state.screen !== screen) {
+        window.history.pushState({ screen }, '', `#/${screen}`);
+      }
+    }
   };
 
   // Authenticated state
@@ -351,6 +361,27 @@ export default function App() {
     _setViewOnlyPackages(val);
     localStorage.setItem('viewOnlyPackages', String(val));
   };
+
+  // Listen to popstate for hardware/browser back button support
+  useEffect(() => {
+    if (!window.history.state) {
+      window.history.replaceState({ screen: currentScreen }, '', `#/${currentScreen}`);
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.screen) {
+        setCurrentScreen(event.state.screen);
+      } else {
+        const fallback = isLoggedIn ? (userRole === 'technician' ? 'technician-home' : 'dashboard') : 'welcome';
+        setCurrentScreen(fallback);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isLoggedIn, userRole, currentScreen]);
 
   // Lists in state to allow dynamic additions/interaction
   const [vehicles, setVehicles]
